@@ -3,7 +3,7 @@
   "diagram_type": "architecture",
   "meta": {
     "title": "Canal de e-mail da Zoe",
-    "subtitle": "Canal Hostinger local na branch; captura IMAP, Inbox e resposta preparados, pendentes de ligação real",
+    "subtitle": "Canal Hostinger local na branch; captura IMAP, Inbox, resposta e limite determinístico para e-mail externo",
     "output": "email-channel-zoe.html",
     "quality_profile": "standard"
   },
@@ -26,7 +26,8 @@
     { "id": "imap-hostinger", "lane": "provedores", "col": 4, "type": "external", "label": "Hostinger IMAP TLS — busca limitada por cursor" },
     { "id": "platform-mail", "lane": "provedores", "col": 4, "type": "external", "label": "SMTP / Resend da instalação — e-mail de sistema e fallback sem caixa da empresa" },
     { "id": "system-mail", "lane": "app", "col": 1, "type": "component", "label": "Convites, cobrança, LGPD e recuperação de conta" },
-    { "id": "inbound-worker", "lane": "app", "col": 2, "type": "component", "label": "Cron IMAP: lease por caixa, cursor CAS, Inbox e efeitos pós-entrada" }
+    { "id": "inbound-worker", "lane": "app", "col": 2, "type": "component", "label": "Cron IMAP: lease por caixa, cursor CAS, Inbox e efeitos pós-entrada" },
+    { "id": "email-agent-turn", "lane": "app", "col": 3, "type": "security", "label": "Turno externo: leituras internas apenas, sem MCP remoto nem mcp:write; resposta passa pela cadeia normal" }
   ],
   "edges": [
     { "id": "e1", "from": "admin", "to": "configuracao", "label": "informa endereço e senha" },
@@ -45,10 +46,12 @@
     { "id": "e7", "from": "connection", "to": "roteador", "label": "credencial descriptografada só no servidor" },
     { "id": "e8", "from": "roteador", "to": "smtp-hostinger", "label": "caixa da empresa configurada e saudável" },
     { "id": "e9", "from": "roteador", "to": "platform-mail", "label": "sem caixa configurada, mantém comportamento legado" },
-    { "id": "e10", "from": "system-mail", "to": "platform-mail", "label": "permanece fora das credenciais da organização" }
+    { "id": "e10", "from": "system-mail", "to": "platform-mail", "label": "permanece fora das credenciais da organização" },
+    { "id": "e18", "from": "inbound-worker", "to": "email-agent-turn", "label": "despacha mensagem marcada external_content_untrusted" },
+    { "id": "e19", "from": "email-agent-turn", "to": "roteador", "label": "resposta somente ao fio original, sujeita aos gates de envio" }
   ],
   "contracts": {
-    "status": "saída e entrada implementadas localmente nesta branch; conexão, mensagens e respostas reais ainda não verificadas no Mac",
+    "status": "saída, entrada e restrição determinística de ferramentas implementadas localmente nesta branch; conexão, mensagens e respostas reais ainda não verificadas no Mac",
     "spec": "docs/specs/33-spec-email-channel-zoe.md",
     "no_links": [
       "Falha ou credencial inválida de uma caixa salva não faz fallback para outro remetente.",
@@ -58,7 +61,6 @@
     ],
     "limits": [
       "A separação de tópicos por remetente ainda não existe; mensagens do mesmo remetente compartilham a conversa CRM.",
-      "O marcador external_content_untrusted acrescenta uma mitigação de prompt no runtime, mas não é uma fronteira determinística de segurança.",
       "Persistência, efeitos da Zoe e cursor IMAP não são uma transação única; crash-recovery idempotente ainda falta.",
       "A captura importa texto simples limitado; HTML e anexos não são processados.",
       "Autenticação SMTP confirmada não garante entrega, reputação, SPF, DKIM ou DMARC."

@@ -28,6 +28,8 @@ import type { McpContext } from '@/lib/mcp/types';
 import { modulosLigados } from '@/lib/instalacao/modulos';
 import { capacidadesDaOrganizacao } from '@/lib/organizacao/capacidades';
 import { filtrarToolsComCallbackDesabilitado } from '@/lib/followup/callback-policy';
+import { PREFIXO_TOOL_ID_MCP_EXTERNO } from '@/lib/mcp/servidor-externo/ids';
+import { catalogEntry } from '@/lib/mcp/tools/catalog';
 
 import type { Logger } from '../../obs/logger';
 import type { CrmEdgeConfig } from './mcp-client';
@@ -47,6 +49,17 @@ import type { EfeitoDasEscrituras } from '@/lib/ai/runtime/efeito-das-escritas';
  * ler é uma garantia que ninguém percebe quando some.
  */
 export const BLOCKED_TOOL_IDS: ReadonlySet<string> = IDS_DO_HARNESS;
+
+/**
+ * Conteúdo recebido por e-mail não pode escolher ferramentas que escrevem no CRM
+ * nem consultar servidores configurados fora do catálogo compilado. A resposta
+ * à mesma conversa continua no harness; apenas leituras compiladas entram aqui.
+ */
+export function filtrarToolsParaEmailExterno(toolIds: readonly string[]): string[] {
+  return toolIds.filter(
+    (id) => !id.startsWith(PREFIXO_TOOL_ID_MCP_EXTERNO) && catalogEntry(id)?.category === 'read',
+  );
+}
 
 export interface McpTurnTools {
   tools: Record<string, Tool>;
