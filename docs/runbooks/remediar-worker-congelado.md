@@ -1,5 +1,10 @@
 # Runbook — o worker congelado: diagnóstico e remediação
 
+> **Registro histórico:** este caso e as versões/imagens citadas descrevem uma instalação
+> anterior baseada no upstream. Não execute os exemplos antigos de tag ou imagem no ambiente
+> atual da Dreamland. Para a fork `luiz-dreamland`, siga primeiro o fluxo de release e o
+> procedimento vigente em [`deploy.md`](deploy.md).
+
 > ## Estado do ensaio: **U6-b EXECUTADO em 2026-08-13, com uma ressalva que muda o procedimento**
 >
 > O ensaio rodou numa VPS real, com estado legado **reproduzido** (não simulado): clone

@@ -39,7 +39,7 @@ móvel e `latest` aponta para o topo da `main`, não para a última release.
 No servidor, clone a origem/fork que vai manter e selecione a tag:
 
 ```bash
-git clone https://github.com/melgarafael/DeskcommCRM.git crm
+git clone https://github.com/luiz-dreamland/DeskcommCRM.git crm
 cd crm
 git fetch --tags
 git checkout vX.Y.Z
@@ -73,7 +73,7 @@ volumes ou `.env`:
 
 ```bash
 CHECK_DIR="$(mktemp -d)"
-git clone --depth 1 --branch vX.Y.Z https://github.com/melgarafael/DeskcommCRM.git "$CHECK_DIR"
+git clone --depth 1 --branch vX.Y.Z https://github.com/luiz-dreamland/DeskcommCRM.git "$CHECK_DIR"
 bash "$CHECK_DIR/hostgator-setup-kit/preflight-upgrade.sh" --installation /caminho/real/crm --to vX.Y.Z
 cd /caminho/real/crm
 bash hostgator-setup-kit/backup.sh
