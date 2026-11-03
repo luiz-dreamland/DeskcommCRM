@@ -28,7 +28,6 @@ import type { McpContext } from '@/lib/mcp/types';
 import { modulosLigados } from '@/lib/instalacao/modulos';
 import { capacidadesDaOrganizacao } from '@/lib/organizacao/capacidades';
 import { filtrarToolsComCallbackDesabilitado } from '@/lib/followup/callback-policy';
-import { PREFIXO_TOOL_ID_MCP_EXTERNO } from '@/lib/mcp/servidor-externo/ids';
 import { catalogEntry } from '@/lib/mcp/tools/catalog';
 
 import type { Logger } from '../../obs/logger';
@@ -51,13 +50,18 @@ import type { EfeitoDasEscrituras } from '@/lib/ai/runtime/efeito-das-escritas';
 export const BLOCKED_TOOL_IDS: ReadonlySet<string> = IDS_DO_HARNESS;
 
 /**
- * Conteúdo recebido por e-mail não pode escolher ferramentas que escrevem no CRM
- * nem consultar servidores configurados fora do catálogo compilado. A resposta
- * à mesma conversa continua no harness; apenas leituras compiladas entram aqui.
+ * Conteúdo recebido por e-mail não pode escolher ferramentas ou servidores.
+ * Além de excluir MCPs remotos e escritas, a lista é intencionalmente fechada
+ * aos dois catálogos que a Zoe pode precisar para responder uma dúvida comercial.
  */
+const EXTERNAL_EMAIL_ALLOWED_MCP_READS: ReadonlySet<string> = new Set([
+  'crm_search_products',
+  'crm_search_knowledge',
+]);
+
 export function filtrarToolsParaEmailExterno(toolIds: readonly string[]): string[] {
   return toolIds.filter(
-    (id) => !id.startsWith(PREFIXO_TOOL_ID_MCP_EXTERNO) && catalogEntry(id)?.category === 'read',
+    (id) => EXTERNAL_EMAIL_ALLOWED_MCP_READS.has(id) && catalogEntry(id)?.category === 'read',
   );
 }
 
