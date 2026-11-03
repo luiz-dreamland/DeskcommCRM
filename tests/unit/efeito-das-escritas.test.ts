@@ -89,8 +89,10 @@ describe("a fiação do predicado (quem responde × quem pergunta)", () => {
     expect(fonte).toMatch(/const efeitosDoTurno = criarEfeitoDasEscrituras\(\)/);
     // uma instância por turno, não duas
     expect(fonte.match(/criarEfeitoDasEscrituras\(\)/g) ?? []).toHaveLength(1);
-    // a ponte recebe o coletor nos DOIS modos (prévia e produção)
-    expect(fonte).toMatch(/preview \? \{ readOnly: true, efeitos: efeitosDoTurno \} : \{ readOnly: false, efeitos: efeitosDoTurno \}/);
+    // a ponte recebe o coletor em ambos os modos; e-mail externo também limita o token a leitura
+    expect(fonte).toMatch(
+      /preview \? \{ readOnly: true, efeitos: efeitosDoTurno \} : \{ readOnly: emailExternoNaoConfiavel, efeitos: efeitosDoTurno \}/,
+    );
     // o before-send recebe a leitura do MESMO coletor
     expect(fonte).toMatch(/registro: registroDoTurno\(\),/);
     // a prévia arma igual ao turno real (o motivo escrito em `preview.ts` para a agenda)
