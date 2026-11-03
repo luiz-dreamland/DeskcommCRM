@@ -25,6 +25,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
+import { useT } from "@/hooks/i18n/useT";
 
 interface ConnectionInfo {
   mailbox_email: string;
@@ -95,6 +97,8 @@ const MENSAGENS_ENTRADA: Record<InboxSettingError, string> = {
 
 export function EmailChannelSettings({ connection, stateUnavailable }: Props) {
   const router = useRouter();
+  const tagDoIdioma = useTagDeIdioma();
+  const t = useT();
   const [email, setEmail] = useState(connection?.mailbox_email ?? "");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -122,7 +126,7 @@ export function EmailChannelSettings({ connection, stateUnavailable }: Props) {
       try {
         const result = await connectHostingerEmail({ email, password });
         if (!result.ok) {
-          setError(MENSAGENS[result.error]);
+          setError(t(MENSAGENS[result.error]));
           return;
         }
         setEmail(result.email);
@@ -132,7 +136,7 @@ export function EmailChannelSettings({ connection, stateUnavailable }: Props) {
         setConnectionStored(true);
         router.refresh();
       } catch {
-        setError(MENSAGENS.connection_failed);
+        setError(t(MENSAGENS.connection_failed));
       } finally {
         setPassword("");
       }
@@ -145,12 +149,12 @@ export function EmailChannelSettings({ connection, stateUnavailable }: Props) {
       try {
         const result = await setHostingerEmailAutomationEnabled(enabled);
         if (!result.ok) {
-          setAutomationError(MENSAGENS_AUTOMACAO[result.error]);
+          setAutomationError(t(MENSAGENS_AUTOMACAO[result.error]));
           return;
         }
         setOutboundEnabled(result.enabled);
       } catch {
-        setAutomationError(MENSAGENS_AUTOMACAO.database_error);
+        setAutomationError(t(MENSAGENS_AUTOMACAO.database_error));
       }
     });
   }
@@ -161,13 +165,13 @@ export function EmailChannelSettings({ connection, stateUnavailable }: Props) {
       try {
         const result = await setHostingerEmailInboxSyncEnabled(enabled);
         if (!result.ok) {
-          setInboxError(MENSAGENS_ENTRADA[result.error]);
+          setInboxError(t(MENSAGENS_ENTRADA[result.error]));
           return;
         }
         setInboxEnabled(result.enabled);
         router.refresh();
       } catch {
-        setInboxError(MENSAGENS_ENTRADA.database_error);
+        setInboxError(t(MENSAGENS_ENTRADA.database_error));
       }
     });
   }
@@ -178,7 +182,7 @@ export function EmailChannelSettings({ connection, stateUnavailable }: Props) {
       try {
         const result = await disconnectHostingerEmail();
         if (!result.ok) {
-          setDisconnectError(MENSAGENS_DESCONEXAO[result.error]);
+          setDisconnectError(t(MENSAGENS_DESCONEXAO[result.error]));
           return;
         }
         setConnectionStored(false);
@@ -188,7 +192,7 @@ export function EmailChannelSettings({ connection, stateUnavailable }: Props) {
         setDisconnectOpen(false);
         router.refresh();
       } catch {
-        setDisconnectError(MENSAGENS_DESCONEXAO.database_error);
+        setDisconnectError(t(MENSAGENS_DESCONEXAO.database_error));
       }
     });
   }
@@ -202,8 +206,8 @@ export function EmailChannelSettings({ connection, stateUnavailable }: Props) {
               <Mail aria-hidden="true" size={20} />
             </div>
             <div>
-              <CardTitle>Caixa da empresa</CardTitle>
-              <CardDescription>Hostinger · entrada e saída protegidas por TLS</CardDescription>
+              <CardTitle>{t("Caixa da empresa")}</CardTitle>
+              <CardDescription>{t("Hostinger · entrada e saída protegidas por TLS")}</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -214,12 +218,12 @@ export function EmailChannelSettings({ connection, stateUnavailable }: Props) {
               className="mb-4 flex gap-3 rounded-md border border-warning/40 bg-warning-bg p-3 text-sm text-warning-fg"
             >
               <CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-              <p>Não foi possível confirmar o estado salvo da caixa. Atualize a página antes de alterar a conexão.</p>
+              <p>{t("Não foi possível confirmar o estado salvo da caixa. Atualize a página antes de alterar a conexão.")}</p>
             </div>
           ) : null}
           <form className="space-y-4" onSubmit={submit}>
             <div className="space-y-2">
-              <Label htmlFor="hostinger-email">Endereço de e-mail</Label>
+              <Label htmlFor="hostinger-email">{t("Endereço de e-mail")}</Label>
               <Input
                 id="hostinger-email"
                 type="email"
@@ -231,7 +235,7 @@ export function EmailChannelSettings({ connection, stateUnavailable }: Props) {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="hostinger-password">Senha da caixa</Label>
+              <Label htmlFor="hostinger-password">{t("Senha da caixa")}</Label>
               <Input
                 id="hostinger-password"
                 type="password"
@@ -242,7 +246,7 @@ export function EmailChannelSettings({ connection, stateUnavailable }: Props) {
                 required
               />
               <p className="text-xs text-muted-foreground">
-                A senha é verificada e guardada cifrada. Ela nunca volta a aparecer nesta tela.
+                {t("A senha é verificada e guardada cifrada. Ela nunca volta a aparecer nesta tela.")}
               </p>
             </div>
 
@@ -253,7 +257,7 @@ export function EmailChannelSettings({ connection, stateUnavailable }: Props) {
               >
                 <CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
                 <div>
-                  <p className="font-medium">Não foi possível conectar</p>
+                  <p className="font-medium">{t("Não foi possível conectar")}</p>
                   <p className="mt-1">{error}</p>
                 </div>
               </div>
@@ -266,9 +270,9 @@ export function EmailChannelSettings({ connection, stateUnavailable }: Props) {
               >
                 <Check aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
                 <div>
-                  <p className="font-medium">Caixa autenticada</p>
+                  <p className="font-medium">{t("Caixa autenticada")}</p>
                   <p className="mt-1">
-                    {savedEmail} passou na verificação de entrada e saída. Use os controles abaixo para liberar a leitura de mensagens novas e, separadamente, os envios automáticos da Zoe.
+                    {savedEmail} {t("passou na verificação de entrada e saída. Use os controles abaixo para liberar a leitura de mensagens novas e, separadamente, os envios automáticos da Zoe.")}
                   </p>
                 </div>
               </div>
@@ -281,12 +285,12 @@ export function EmailChannelSettings({ connection, stateUnavailable }: Props) {
                 <CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
                 <div>
                   <p className="font-medium">
-                    {connectionMatchesEmail ? "Conexão indisponível" : "Alteração pendente"}
+                    {connectionMatchesEmail ? t("Conexão indisponível") : t("Alteração pendente")}
                   </p>
                   <p className="mt-1">
                     {connectionMatchesEmail
-                      ? `A caixa ${savedEmail} está salva, mas precisa ser verificada novamente. As automações ficam bloqueadas até a conexão voltar.`
-                      : `O endereço salvo é ${savedEmail}. Verifique e salve o novo endereço antes de usá-lo.`}
+                      ? <>{t("A caixa")} {savedEmail} {t("está salva, mas precisa ser verificada novamente. As automações ficam bloqueadas até a conexão voltar.")}</>
+                      : <>{t("O endereço salvo é")} {savedEmail}. {t("Verifique e salve o novo endereço antes de usá-lo.")}</>}
                   </p>
                 </div>
               </div>
@@ -296,12 +300,12 @@ export function EmailChannelSettings({ connection, stateUnavailable }: Props) {
               {isPending ? (
                 <>
                   <LoaderCircle aria-hidden="true" className="animate-spin" />
-                  Verificando acesso...
+                  {t("Verificando acesso...")}
                 </>
               ) : (
                 <>
                   <RefreshCw aria-hidden="true" />
-                  Verificar e salvar
+                  {t("Verificar e salvar")}
                 </>
               )}
             </Button>
@@ -313,33 +317,33 @@ export function EmailChannelSettings({ connection, stateUnavailable }: Props) {
         <CardHeader>
           <div className="flex items-center gap-2">
             <LockKeyhole aria-hidden="true" className="text-muted-foreground" size={18} />
-            <CardTitle>Estado do canal</CardTitle>
+            <CardTitle>{t("Estado do canal")}</CardTitle>
           </div>
-          <CardDescription>O teste não envia nem importa mensagens.</CardDescription>
+          <CardDescription>{t("O teste não envia nem importa mensagens.")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 text-sm">
           <div className="flex items-center justify-between gap-3">
-            <span className="text-muted-foreground">Entrada IMAP</span>
+            <span className="text-muted-foreground">{t("Entrada IMAP")}</span>
             <Badge variant={connectionHealthy ? "success" : connectionMatchesEmail && connection?.status === "error" ? "error" : "secondary"}>
               {connectionHealthy
-                ? "Autenticada"
+                ? t("Autenticada")
                 : connectionMatchesEmail && connection?.status === "error"
-                  ? "Falha na conexão"
+                  ? t("Falha na conexão")
                   : stateUnavailable
-                    ? "Não verificada"
-                    : "Não conectada"}
+                    ? t("Não verificada")
+                    : t("Não conectada")}
             </Badge>
           </div>
           <div className="flex items-center justify-between gap-3">
-            <span className="text-muted-foreground">Acesso SMTP</span>
+            <span className="text-muted-foreground">{t("Acesso SMTP")}</span>
             <Badge variant={connectionHealthy ? "success" : connectionMatchesEmail && connection?.status === "error" ? "error" : "secondary"}>
               {connectionHealthy
-                ? "Verificado"
+                ? t("Verificado")
                 : connectionMatchesEmail && connection?.status === "error"
-                  ? "Falha na conexão"
+                  ? t("Falha na conexão")
                   : stateUnavailable
-                    ? "Não verificada"
-                    : "Não conectado"}
+                    ? t("Não verificada")
+                    : t("Não conectado")}
             </Badge>
           </div>
           {connectionStored && connectionMatchesEmail ? (
@@ -347,10 +351,10 @@ export function EmailChannelSettings({ connection, stateUnavailable }: Props) {
               <div className="flex items-center justify-between gap-4">
                 <div className="space-y-1">
                   <Label htmlFor="hostinger-inbox-sync" className="font-medium">
-                    Receber mensagens e disponibilizar à Zoe
+                    {t("Receber mensagens e disponibilizar à Zoe")}
                   </Label>
                   <p className="text-xs leading-relaxed text-muted-foreground">
-                    Importa somente mensagens novas. Se houver um agente ativo neste canal, o conteúdo poderá ser processado pelo provedor de modelo configurado. O histórico anterior não é importado.
+                    {t("Importa somente mensagens novas. Se houver um agente ativo neste canal, o conteúdo poderá ser processado pelo provedor de modelo configurado. O histórico anterior não é importado.")}
                   </p>
                 </div>
                 <Switch
@@ -358,17 +362,17 @@ export function EmailChannelSettings({ connection, stateUnavailable }: Props) {
                   checked={inboxEnabled}
                   disabled={stateUnavailable || isPending || (!connectionHealthy && !inboxEnabled)}
                   onCheckedChange={toggleInboxSync}
-                  aria-label="Receber mensagens novas e disponibilizar à Zoe"
+                  aria-label={t("Receber mensagens novas e disponibilizar à Zoe")}
                 />
               </div>
               {inboxError ? <p role="alert" className="text-xs text-error-fg">{inboxError}</p> : null}
               <div className="flex items-center justify-between gap-4 border-t border-border pt-3">
                 <div className="space-y-1">
                   <Label htmlFor="hostinger-automation-sending" className="font-medium">
-                    Permitir envios automáticos da Zoe
+                    {t("Permitir envios automáticos da Zoe")}
                   </Label>
                   <p className="text-xs leading-relaxed text-muted-foreground">
-                    Desligado por padrão. Ao ativar, respostas da Zoe e regras de automação podem enviar por esta caixa sem pedir aprovação a cada mensagem.
+                    {t("Desligado por padrão. Ao ativar, respostas da Zoe e regras de automação podem enviar por esta caixa sem pedir aprovação a cada mensagem.")}
                   </p>
                 </div>
                 <Switch
@@ -376,7 +380,7 @@ export function EmailChannelSettings({ connection, stateUnavailable }: Props) {
                   checked={outboundEnabled}
                   disabled={stateUnavailable || isPending || (!connectionHealthy && !outboundEnabled)}
                   onCheckedChange={toggleAutomationSending}
-                  aria-label="Permitir que a Zoe e as automações enviem pela caixa Hostinger"
+                  aria-label={t("Permitir que a Zoe e as automações enviem pela caixa Hostinger")}
                 />
               </div>
               {automationError ? (
@@ -385,36 +389,36 @@ export function EmailChannelSettings({ connection, stateUnavailable }: Props) {
             </div>
           ) : null}
           <div className="flex items-center justify-between gap-3">
-            <span className="text-muted-foreground">Sincronização</span>
+            <span className="text-muted-foreground">{t("Sincronização")}</span>
             <Badge variant="secondary">
               {stateUnavailable
-                ? "Não verificada"
+                ? t("Não verificada")
                 : !connectionMatchesEmail && connection?.inbox_sync_enabled
-                ? "Será desligada ao trocar a caixa"
+                ? t("Será desligada ao trocar a caixa")
                 : inboxEnabled
                   ? connection?.status === "healthy"
-                    ? "Ativada"
-                    : "Pausada · conexão indisponível"
-                  : "Desligada"}
+                    ? t("Ativada")
+                    : t("Pausada · conexão indisponível")
+                  : t("Desligada")}
             </Badge>
           </div>
           {inboxEnabled && connection?.last_sync_at ? (
             <p className="text-xs text-muted-foreground">
-              Última sincronização: {new Date(connection.last_sync_at).toLocaleString("pt-BR")}
+              {t("Última sincronização:")} {new Date(connection.last_sync_at).toLocaleString(tagDoIdioma)}
             </p>
           ) : null}
           {inboxEnabled && connection?.last_error_code ? (
             <p role="status" className="text-xs text-warning-fg">
-              A última sincronização sinalizou um problema. As mensagens recebidas continuam seguras na caixa original.
+              {t("A última sincronização sinalizou um problema. As mensagens recebidas continuam seguras na caixa original.")}
             </p>
           ) : null}
           <p className="border-t border-border pt-4 text-xs leading-relaxed text-muted-foreground">
-            Ler a Inbox e autorizar envios automáticos são escolhas separadas. A conexão começa com as duas opções desligadas.
+            {t("Ler a Inbox e autorizar envios automáticos são escolhas separadas. A conexão começa com as duas opções desligadas.")}
           </p>
           {connectionStored ? (
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
               <p className="max-w-md text-xs leading-relaxed text-muted-foreground">
-                Desconectar remove do CRM a senha cifrada e desliga qualquer sincronização futura.
+                {t("Desconectar remove do CRM a senha cifrada e desliga qualquer sincronização futura.")}
               </p>
               <AlertDialog
                 open={disconnectOpen}
@@ -425,14 +429,14 @@ export function EmailChannelSettings({ connection, stateUnavailable }: Props) {
               >
                 <AlertDialogTrigger asChild>
                   <Button type="button" variant="outline" disabled={stateUnavailable || isPending}>
-                    Desconectar caixa
+                    {t("Desconectar caixa")}
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Desconectar {connection?.mailbox_email ?? "esta caixa"}?</AlertDialogTitle>
+                    <AlertDialogTitle>{t("Desconectar")} {connection?.mailbox_email ?? t("esta caixa")}?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      A credencial salva será removida e a sincronização ficará desligada. Para reconectar, será necessário informar e verificar a senha novamente.
+                      {t("A credencial salva será removida e a sincronização ficará desligada. Para reconectar, será necessário informar e verificar a senha novamente.")}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   {disconnectError ? (
@@ -444,7 +448,7 @@ export function EmailChannelSettings({ connection, stateUnavailable }: Props) {
                     </div>
                   ) : null}
                   <AlertDialogFooter>
-                    <AlertDialogCancel disabled={isPending}>Manter conectada</AlertDialogCancel>
+                    <AlertDialogCancel disabled={isPending}>{t("Manter conectada")}</AlertDialogCancel>
                     <AlertDialogAction
                       disabled={isPending || stateUnavailable}
                       onClick={(event) => {
@@ -452,7 +456,7 @@ export function EmailChannelSettings({ connection, stateUnavailable }: Props) {
                         disconnect();
                       }}
                     >
-                      {isPending ? "Desconectando…" : "Remover credencial"}
+                      {isPending ? t("Desconectando…") : t("Remover credencial")}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>

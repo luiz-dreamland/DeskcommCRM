@@ -189,6 +189,10 @@ export const metaCloudAdapter: ChannelAdapter = {
     sendFailed: "meta_error",
     unknownError: "meta_unknown",
   },
+  missingRecipient: {
+    errorCode: "missing_phone_number",
+    errorMessage: "Contato sem telefone para envio WhatsApp.",
+  },
 
   async fetchInboundMedia(input): Promise<{ buffer: Buffer; mime: string }> {
     const creds = await resolveMetaCreds(createAdminClient(), {

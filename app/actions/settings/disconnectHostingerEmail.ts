@@ -8,6 +8,7 @@ import { loadAuthUser, mfaEmDivida, resolveActiveOrg } from "@/lib/auth/server";
 import { podeAdministrarEmpresa } from "@/lib/auth/pode-administrar-empresa";
 import { ipDoCliente } from "@/lib/http/ip-do-cliente";
 import { supportWriteError } from "@/lib/impersonate/support";
+import { stopHostingerEmailChannelSession } from "@/lib/channels/hostinger-email-session";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type DisconnectHostingerEmailResult =
@@ -34,15 +35,13 @@ export async function disconnectHostingerEmail(): Promise<DisconnectHostingerEma
     .maybeSingle();
   if (connectionError) return { ok: false, error: "database_error" };
 
-  if (connection) {
-    const { error: sessionError } = await admin
-      .from("channel_sessions")
-      .update({ status: "STOPPED", status_reason: "email_connection_disconnected" })
-      .eq("organization_id", org.orgId)
-      .eq("provider", "hostinger_email")
-      .eq("metadata->>email_connection_id", connection.id);
-    if (sessionError) return { ok: false, error: "database_error" };
-  }
+  if (
+    connection &&
+    !(await stopHostingerEmailChannelSession(admin, {
+      organizationId: org.orgId,
+      connectionId: connection.id,
+    }))
+  ) return { ok: false, error: "database_error" };
 
   const { data, error } = await admin
     .from("organization_email_connections")

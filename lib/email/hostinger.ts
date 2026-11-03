@@ -1,5 +1,3 @@
-import "server-only";
-
 import { ImapFlow, type FetchMessageObject } from "imapflow";
 import nodemailer from "nodemailer";
 import PostalMime, { type Address } from "postal-mime";

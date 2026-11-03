@@ -256,6 +256,8 @@ export interface ChannelAdapter {
    * de `lib/channels/`. Quem chama escreve o que o adapter disser.
    */
   readonly codes: { notConfigured: string; sendFailed: string; unknownError: string };
+  /** Terminal input error when this contact has no address for the channel. */
+  readonly missingRecipient?: { errorCode: string; errorMessage: string };
 
   /**
    * URL da foto de perfil do contato, ou null quando não há (sem foto,

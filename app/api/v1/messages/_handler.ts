@@ -1138,12 +1138,16 @@ export async function sendMessageHandler(
       .maybeSingle();
     if (updated) message = updated as unknown as Message;
   } else if (!chatId) {
+    const missingRecipient = adapter.missingRecipient ?? {
+      errorCode: "missing_input",
+      errorMessage: "Contato sem endereço para este canal.",
+    };
     const { data: updated } = await supabase
       .from("messages")
       .update({
         status: "failed",
-        error_code: "missing_input",
-        error_message: "Contato sem endereço para este canal.",
+        error_code: missingRecipient.errorCode,
+        error_message: missingRecipient.errorMessage,
       })
       .eq("id", message.id)
       .select(MSG_COLS)

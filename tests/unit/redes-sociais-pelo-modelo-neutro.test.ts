@@ -131,8 +131,8 @@ describe("CONTROLE: os canais que já existiam continuam declarados", () => {
     expect(inboxSupported("telegram")).toBe(false);
   });
 
-  it("o vocabulário de canal da conversa não mudou", () => {
-    expect([...CANAIS_DE_CONVERSA]).toEqual(["whatsapp", "instagram", "facebook"]);
+  it("o e-mail entra no vocabulário sem remover os canais existentes", () => {
+    expect([...CANAIS_DE_CONVERSA]).toEqual(["whatsapp", "email", "instagram", "facebook"]);
   });
 
   it("a matriz de capabilities segue respondendo por todos os canais de mensagem", () => {
@@ -142,6 +142,7 @@ describe("CONTROLE: os canais que já existiam continuam declarados", () => {
       "zernio",
       "zernio_social",
       "datafy",
+      "hostinger_email",
     ]);
     for (const provider of PROVIDERS_DE_MENSAGEM) {
       const caps = capabilitiesOf(provider);

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
@@ -6,6 +7,7 @@ import { ROLE_RANK } from "@/lib/auth/types";
 import { ConexoesShell } from "@/components/connections/ConexoesShell";
 import { canalGraphParceiroLigado, GRAPH_PARTNER_LABEL } from "@/lib/channels/graph-parceiro/credentials";
 import { traduzir } from "@/lib/i18n/dicionario";
+import { Button } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Conexões" };
@@ -41,6 +43,17 @@ export default async function ConnectionsPage() {
         wacallsConfigured={wacallsConfigured}
         graphParceiro={canalGraphParceiroLigado() ? { label: GRAPH_PARTNER_LABEL } : null}
       />
+      <section className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border bg-card p-4">
+        <div className="space-y-1">
+          <h2 className="font-medium">{traduzir("Caixa de e-mail", idioma)}</h2>
+          <p className="text-sm text-muted-foreground">
+            {traduzir("Conecte uma caixa para receber e responder conversas comerciais por e-mail.", idioma)}
+          </p>
+        </div>
+        <Button asChild variant="outline">
+          <Link href="/app/settings/email">{traduzir("Configurar e-mail", idioma)}</Link>
+        </Button>
+      </section>
     </div>
   );
 }

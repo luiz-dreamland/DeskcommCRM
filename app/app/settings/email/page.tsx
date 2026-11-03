@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getHostingerEmailConnection } from "@/lib/email/hostinger-config";
 import { podeAdministrarEmpresa } from "@/lib/auth/pode-administrar-empresa";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { traduzir } from "@/lib/i18n/dicionario";
 import { EmailChannelSettings } from "./_settings";
 
 export const dynamic = "force-dynamic";
@@ -17,9 +18,9 @@ export default async function EmailChannelSettingsPage() {
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-6">
       <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">E-mail da Zoe</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{traduzir("E-mail comercial", user.idioma)}</h1>
         <p className="text-sm text-muted-foreground">
-          Conecte a caixa e escolha se novas mensagens ficam disponíveis para a Zoe e se ela pode responder automaticamente por e-mail.
+          {traduzir("Conecte a caixa e escolha se novas mensagens ficam disponíveis para a Zoe e se ela pode responder automaticamente por e-mail.", user.idioma)}
         </p>
       </header>
       <EmailChannelSettings

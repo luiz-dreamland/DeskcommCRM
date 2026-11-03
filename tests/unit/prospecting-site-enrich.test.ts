@@ -86,6 +86,8 @@ describe("enriquecerSitesPendentes", () => {
       expect.anything(),
       undefined,
       [0, 0],
+      undefined,
+      [false, false],
     );
     expect(vi.mocked(audit)).toHaveBeenCalledTimes(1);
     expect(vi.mocked(audit)).toHaveBeenCalledWith(

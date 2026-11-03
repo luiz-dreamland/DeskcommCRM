@@ -776,12 +776,14 @@ export const NAV_CATALOG = [
   },
   {
     href: "/app/settings/email",
-    label: "E-mail da Zoe",
+    label: "E-mail",
     description: "Conecte uma caixa Hostinger para preparar conversas comerciais por e-mail.",
     icon: "Inbox",
     group: "canais",
     minRole: "admin",
-    sidebar: true,
+    // Continua pesquisável e alcançável pelo hub de Conexões, sem ultrapassar
+    // o limite de linhas úteis do menu lateral.
+    sidebar: false,
   },
   {
     // Não tinha link nenhum no app inteiro: só se chegava digitando a URL.
