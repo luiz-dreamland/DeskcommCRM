@@ -25,7 +25,43 @@ import { aplicarNoChangelog, montarSecao } from "../lib/release/montar-secao";
 const RAIZ = path.resolve(__dirname, "..");
 const DIR_FRAGMENTOS = path.join(RAIZ, ".changes");
 const CHANGELOG = path.join(RAIZ, "CHANGELOG.md");
-const REPO = "melgarafael/DeskcommCRM";
+
+/**
+ * Release notes must link to the repository that produced them. Actions sets
+ * GITHUB_REPOSITORY for release runs; local cuts use the configured `origin`.
+ * The fallback belongs to this maintained Dreamland fork, never upstream.
+ */
+function remotoDoGitHub(): string | undefined {
+  try {
+    return execFileSync("git", ["remote", "get-url", "origin"], {
+      cwd: RAIZ,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+  } catch {
+    return undefined;
+  }
+}
+
+export function repositorioDoGitHub(
+  doWorkflow = process.env.GITHUB_REPOSITORY,
+  remoto = remotoDoGitHub(),
+): string {
+  const valido = (valor: string | undefined): valor is string =>
+    Boolean(valor && /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(valor.trim()));
+
+  const repoDoWorkflow = doWorkflow?.trim();
+  if (valido(repoDoWorkflow)) return repoDoWorkflow;
+
+  const caminho = remoto
+    ? /github\.com[:/]([^/\s]+\/[^/\s]+?)(?:\.git)?$/i.exec(remoto)?.[1]
+    : undefined;
+  if (valido(caminho)) return caminho;
+
+  return "luiz-dreamland/DeskcommCRM";
+}
+
+const REPO = repositorioDoGitHub();
 
 const compararUrl = (de: string, para: string) => `https://github.com/${REPO}/compare/${de}...${para}`;
 

@@ -84,7 +84,7 @@ atendeu o tempo todo; atendeu com o agente de dois meses atrás.
 Read-only, seguro em produção, não precisa de clone:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/melgarafael/DeskcommCRM/main/hostgator-setup-kit/diagnostico.sh | bash
+curl -fsSL https://raw.githubusercontent.com/luiz-dreamland/DeskcommCRM/main/hostgator-setup-kit/diagnostico.sh | bash
 ```
 
 Ou, se o operador já tem o projeto no disco:
