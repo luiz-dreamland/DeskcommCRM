@@ -106,6 +106,18 @@ O cron `hostinger-email-inbox` lê uma página limitada por rodada, preserva men
 
 O caminho de persistência da Inbox, o worker de sincronização, a retomada de efeitos pendentes, a separação por fio RFC, as respostas com cabeçalhos, os opt-ins separados para ler e enviar e o bloqueio determinístico de ferramentas mutantes em mensagens externas existem nesta branch. A conexão não foi ativada nesta implementação; nenhuma mensagem foi importada ou enviada. Campanhas continuam pausadas até a política própria ser configurada. A idempotência cobre a retomada do carimbo e do despacho da Zoe, sem tornar Postgres, runtime e cursor uma transação distribuída.
 
+### Checklist do Sistema Vivo — teste manual da caixa
+
+- **Entrada:** admin abre **Conexões → Configurar e-mail** (`/app/connections` → `/app/settings/email`) e confirma o diálogo de `EmailChannelSettings`.
+- **Saída:** `sendHostingerEmailTest` usa a credencial saudável da organização e `sendHostingerEmail` envia conteúdo fixo somente para o mesmo endereço da caixa; não é uma demanda comercial nem chama a Zoe.
+- **Registro:** `audit()` grava `email.test_message_accepted` ou `email.test_message_failed` em `api_audit_log`, sem endereço, corpo ou credencial.
+- **Superfície:** `app/app/settings/email/_settings.tsx` mostra o resultado como `status` ou `alert`; `lib/navigation/catalogo.ts` e o card de Conexões dão a porta até a configuração.
+- **Anti-morte:** não se aplica a uma ação de diagnóstico, pois ela não abre demanda nem conversa; a justificativa é que repetir envio pode duplicar mensagem, por isso não há retry automático.
+- **Configuração:** estado da conexão e caixa de destino são mostrados antes da confirmação; a credencial permanece só no servidor.
+- **Continuidade:** o envio é deliberadamente humano e explícito; não inicia campanha, conversa nem handoff para a Zoe.
+- **Laço de retorno:** falha sanitizada aparece na tela e na auditoria; a pessoa corrige ou verifica a caixa e decide se tenta novamente. O mapa `docs/architecture/email-channel-zoe.architecture.json` representa a saída, a resposta SMTP e o retorno visual/auditável.
+- **Prova da tela:** `tests/e2e/email-teste-hostinger-pela-tela.spec.ts` navega pela UI com uma conexão sintética e cancela a confirmação. A captura e o resultado desse E2E ainda precisam ser inspecionados; nenhuma mensagem real foi enviada.
+
 ## 9. Critérios de aceite
 
 - Uma instalação sem credenciais continua operando e mostra o canal como desconectado.

@@ -1188,6 +1188,7 @@ jobs:
         busca-na-conversa.spec.ts
         zona-de-perigo-apaga-dados-de-teste.spec.ts
         email-da-instalacao-pela-tela.spec.ts
+        email-teste-hostinger-pela-tela.spec.ts
         central-avisos-resolver-em-lote.spec.ts
         central-por-gravidade.spec.ts
         voz-desligada-por-padrao.spec.ts
