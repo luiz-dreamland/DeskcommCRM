@@ -5029,7 +5029,8 @@ declare v_id uuid;
 begin
   insert into public.conversations (organization_id, contact_id, channel_session_id, channel, status, is_group, unread_count_for_assignee, metadata)
   values (p_org, p_contact, p_session, 'whatsapp', 'open', false, 0, '{}'::jsonb)
-  on conflict (organization_id, contact_id, channel_session_id) where is_group = false
+  on conflict (organization_id, contact_id, channel_session_id)
+    where is_group = false and channel is distinct from 'email'
   do update set updated_at = now()
   returning id into v_id;
   return v_id;
@@ -57391,7 +57392,8 @@ begin
   insert into public.conversations
     (organization_id, contact_id, channel_session_id, channel, status, is_group, unread_count_for_assignee, metadata, last_message_at)
   values (p_org, p_contact, p_session, 'whatsapp', 'closed', false, 0, '{}'::jsonb, p_last_message_at)
-  on conflict (organization_id, contact_id, channel_session_id) where is_group = false
+  on conflict (organization_id, contact_id, channel_session_id)
+    where is_group = false and channel is distinct from 'email'
   do nothing
   returning id into v_id;
 
@@ -71217,49 +71219,6 @@ create index if not exists conversations_email_provider_message_id_idx
     and is_group = false
     and provider_conversation_id is not null;
 
-notify pgrst, 'reload schema';
-
--- ---- inferência do índice de conversas importadas (migration 9089) ----
--- O índice 1:1 exclui explicitamente emails; o ON CONFLICT precisa repetir
--- esse predicado para o PostgreSQL inferir o índice parcial.
-create or replace function public.fn_upsert_wa_conversation_importada(
-  p_org uuid, p_contact uuid, p_session uuid, p_last_message_at timestamptz
-) returns uuid language plpgsql security definer set search_path = '' as $fn$
-declare v_id uuid;
-begin
-  select c.id into v_id
-    from public.conversations c
-   where c.organization_id = p_org and c.contact_id = p_contact
-     and c.channel_session_id = p_session and c.is_group = false;
-  if v_id is not null then
-    return v_id;
-  end if;
-
-  insert into public.conversations
-    (organization_id, contact_id, channel_session_id, channel, status, is_group, unread_count_for_assignee, metadata, last_message_at)
-  values (p_org, p_contact, p_session, 'whatsapp', 'closed', false, 0, '{}'::jsonb, p_last_message_at)
-  on conflict (organization_id, contact_id, channel_session_id)
-    where is_group = false and channel is distinct from 'email'
-  do nothing
-  returning id into v_id;
-
-  if v_id is null then
-    select c.id into v_id
-      from public.conversations c
-     where c.organization_id = p_org and c.contact_id = p_contact
-       and c.channel_session_id = p_session and c.is_group = false;
-  end if;
-  return v_id;
-end; $fn$;
-
-comment on function public.fn_upsert_wa_conversation_importada(uuid, uuid, uuid, timestamptz) is
-  'Irmã de fn_upsert_wa_conversation para o importador de histórico do WhatsApp (#999): devolve a conversa 1:1 existente sem tocar nela, ou cria uma closed e sem dono. A inferência do ON CONFLICT corresponde ao índice parcial de canais não-email. Só service_role.';
-
-revoke all on function public.fn_upsert_wa_conversation_importada(uuid, uuid, uuid, timestamptz) from public;
-revoke execute on function public.fn_upsert_wa_conversation_importada(uuid, uuid, uuid, timestamptz) from anon, authenticated;
-grant execute on function public.fn_upsert_wa_conversation_importada(uuid, uuid, uuid, timestamptz) to service_role;
-
-notify pgrst, 'reload schema';
 
 -- ============================================================================
 -- 9059 — O AVISO ESCRITO PELO ADMIN (#1418, fatia 1)
