@@ -28,6 +28,7 @@ import type { McpContext } from '@/lib/mcp/types';
 import { modulosLigados } from '@/lib/instalacao/modulos';
 import { capacidadesDaOrganizacao } from '@/lib/organizacao/capacidades';
 import { filtrarToolsComCallbackDesabilitado } from '@/lib/followup/callback-policy';
+import { catalogEntry } from '@/lib/mcp/tools/catalog';
 
 import type { Logger } from '../../obs/logger';
 import type { CrmEdgeConfig } from './mcp-client';
@@ -47,6 +48,22 @@ import type { EfeitoDasEscrituras } from '@/lib/ai/runtime/efeito-das-escritas';
  * ler é uma garantia que ninguém percebe quando some.
  */
 export const BLOCKED_TOOL_IDS: ReadonlySet<string> = IDS_DO_HARNESS;
+
+/**
+ * Conteúdo recebido por e-mail não pode escolher ferramentas ou servidores.
+ * Além de excluir MCPs remotos e escritas, a lista é intencionalmente fechada
+ * aos dois catálogos que a Zoe pode precisar para responder uma dúvida comercial.
+ */
+const EXTERNAL_EMAIL_ALLOWED_MCP_READS: ReadonlySet<string> = new Set([
+  'crm_search_products',
+  'crm_search_knowledge',
+]);
+
+export function filtrarToolsParaEmailExterno(toolIds: readonly string[]): string[] {
+  return toolIds.filter(
+    (id) => EXTERNAL_EMAIL_ALLOWED_MCP_READS.has(id) && catalogEntry(id)?.category === 'read',
+  );
+}
 
 export interface McpTurnTools {
   tools: Record<string, Tool>;
