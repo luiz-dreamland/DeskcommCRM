@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useTransition, type FormEvent } from "react";
-import { Check, CircleAlert, LoaderCircle, LockKeyhole, Mail, RefreshCw } from "lucide-react";
+import { Check, CircleAlert, LoaderCircle, LockKeyhole, Mail, RefreshCw, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { connectHostingerEmail } from "@/app/actions/settings/connectHostingerEmail";
 import { disconnectHostingerEmail } from "@/app/actions/settings/disconnectHostingerEmail";
 import { setHostingerEmailAutomationEnabled } from "@/app/actions/settings/setHostingerEmailAutomation";
 import { setHostingerEmailInboxSyncEnabled } from "@/app/actions/settings/setHostingerEmailInboxSync";
+import { sendHostingerEmailTest } from "@/app/actions/settings/sendHostingerEmailTest";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -74,6 +75,24 @@ const MENSAGENS: Record<ConnectionError, string> = {
   database_error: "Não foi possível salvar a conexão. Tente novamente em instantes.",
 };
 type InboxSettingError = AutomationSettingError;
+type EmailTestError =
+  | "unauthenticated"
+  | "forbidden"
+  | "mfa_required"
+  | "connection_unavailable"
+  | "send_failed"
+  | "rate_limited"
+  | "sender_rejected";
+
+const MENSAGENS_TESTE: Record<EmailTestError, string> = {
+  unauthenticated: "Sua sessão terminou. Entre novamente e tente enviar o teste.",
+  forbidden: "Somente um administrador da empresa pode enviar o teste.",
+  mfa_required: "Confirme sua verificação em duas etapas e tente novamente.",
+  connection_unavailable: "A caixa não está conectada e saudável. Verifique a conexão antes de enviar.",
+  send_failed: "Não foi possível confirmar o aceite do SMTP. Confira a caixa antes de tentar de novo para evitar duplicidade.",
+  rate_limited: "O servidor limitou o envio. Confira se a mensagem chegou antes de tentar novamente.",
+  sender_rejected: "O servidor recusou o remetente. Confira a configuração da caixa e tente novamente.",
+};
 
 const MENSAGENS_DESCONEXAO: Record<DisconnectError, string> = {
   unauthenticated: "Sua sessão terminou. Entre novamente para desconectar a caixa.",
@@ -105,11 +124,16 @@ export function EmailChannelSettings({ connection, stateUnavailable }: Props) {
   const [disconnectError, setDisconnectError] = useState<string | null>(null);
   const [automationError, setAutomationError] = useState<string | null>(null);
   const [inboxError, setInboxError] = useState<string | null>(null);
+  const [emailTestMessage, setEmailTestMessage] = useState<{
+    kind: "success" | "error";
+    text: string;
+  } | null>(null);
   const [outboundEnabled, setOutboundEnabled] = useState(
     connection?.outbound_automation_enabled ?? false,
   );
   const [inboxEnabled, setInboxEnabled] = useState(connection?.inbox_sync_enabled ?? false);
   const [disconnectOpen, setDisconnectOpen] = useState(false);
+  const [emailTestOpen, setEmailTestOpen] = useState(false);
   const [connectionStored, setConnectionStored] = useState(Boolean(connection));
   const [savedEmail, setSavedEmail] = useState(
     connection?.mailbox_email ?? null,
@@ -193,6 +217,35 @@ export function EmailChannelSettings({ connection, stateUnavailable }: Props) {
         router.refresh();
       } catch {
         setDisconnectError(t(MENSAGENS_DESCONEXAO.database_error));
+      }
+    });
+  }
+
+  function sendEmailTest() {
+    setEmailTestMessage(null);
+    startTransition(async () => {
+      try {
+        const result = await sendHostingerEmailTest();
+        if (!result.ok) {
+          setEmailTestMessage({ kind: "error", text: t(MENSAGENS_TESTE[result.error]) });
+          setEmailTestOpen(false);
+          return;
+        }
+        setEmailTestMessage({
+          kind: "success",
+          text: t(
+            "O servidor SMTP aceitou a mensagem para a própria caixa. Confira a entrada e o spam; o aceite não confirma a entrega final.",
+          ),
+        });
+        setEmailTestOpen(false);
+      } catch {
+        setEmailTestMessage({
+          kind: "error",
+          text: t(
+            "Não foi possível confirmar o envio. Confira a caixa antes de tentar de novo para evitar duplicidade.",
+          ),
+        });
+        setEmailTestOpen(false);
       }
     });
   }
@@ -319,7 +372,9 @@ export function EmailChannelSettings({ connection, stateUnavailable }: Props) {
             <LockKeyhole aria-hidden="true" className="text-muted-foreground" size={18} />
             <CardTitle>{t("Estado do canal")}</CardTitle>
           </div>
-          <CardDescription>{t("O teste não envia nem importa mensagens.")}</CardDescription>
+          <CardDescription>
+            {t("A autenticação verifica SMTP e IMAP sem enviar. O envio de teste é manual e vai somente para a própria caixa conectada.")}
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 text-sm">
           <div className="flex items-center justify-between gap-3">
@@ -346,6 +401,64 @@ export function EmailChannelSettings({ connection, stateUnavailable }: Props) {
                     : t("Não conectado")}
             </Badge>
           </div>
+          {connectionHealthy ? (
+            <div className="space-y-3 rounded-md border border-border bg-surface p-3">
+              <div className="space-y-1">
+                <p className="font-medium">{t("Confirmar recebimento")}</p>
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  {t("Envia uma única mensagem para")} {savedEmail}. {t("Nenhum lead ou contato externo será avisado.")}
+                </p>
+              </div>
+              {emailTestMessage ? (
+                <div
+                  role={emailTestMessage.kind === "success" ? "status" : "alert"}
+                  className={
+                    emailTestMessage.kind === "success"
+                      ? "rounded-md border border-success/40 bg-success-bg p-3 text-xs text-success-fg"
+                      : "rounded-md border border-error/40 bg-error-bg p-3 text-xs text-error-fg"
+                  }
+                >
+                  {emailTestMessage.text}
+                </div>
+              ) : null}
+              <AlertDialog
+                open={emailTestOpen}
+                onOpenChange={(open) => {
+                  setEmailTestOpen(open);
+                  if (open) setEmailTestMessage(null);
+                }}
+              >
+                <AlertDialogTrigger asChild>
+                  <Button type="button" variant="outline" disabled={stateUnavailable || isPending}>
+                    <Send aria-hidden="true" />
+                    {t("Enviar e-mail de teste")}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      {t("Enviar teste para")} {savedEmail}?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {t("Será enviada uma mensagem fixa somente para esta caixa. O envio não inicia campanha nem contata leads; o servidor pode aceitar a mensagem sem garantir que ela chegue à entrada.")}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel disabled={isPending}>{t("Cancelar")}</AlertDialogCancel>
+                    <AlertDialogAction
+                      disabled={isPending || stateUnavailable}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        sendEmailTest();
+                      }}
+                    >
+                      {isPending ? t("Enviando teste…") : t("Confirmar envio")}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          ) : null}
           {connectionStored && connectionMatchesEmail ? (
             <div className="space-y-3 rounded-md border border-border bg-surface p-3">
               <div className="flex items-center justify-between gap-4">

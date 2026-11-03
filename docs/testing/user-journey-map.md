@@ -4157,3 +4157,21 @@ reprova, depois da tentativa de limpeza. Trace e vídeo ficam desligados apenas
 nesta spec para não arquivar URLs assinadas. A limpeza é limitada aos UUIDs
 sintéticos desta execução. A coleta `--list` não é prova de UX; a aceitação
 depende do CI do candidato e da inspeção das capturas produzidas.
+
+## Confirmação do teste de recebimento Hostinger — feature local
+
+`email-teste-hostinger-pela-tela.spec.ts`, inscrita na parte 3 do E2E, usa uma
+conexão sintética cifrada no banco local, entra como admin de organização e
+navega por **Conexões → Configurar e-mail**. A captura mostra o endereço de
+destino e o aviso de que nenhuma campanha ou lead será contatado. O caso cancela
+a confirmação; a action de envio não é chamada. As regras de envio e o resultado
+visível também têm testes unitários em
+`app/app/settings/email/_settings.test.tsx` e
+`app/actions/settings/sendHostingerEmailTest.test.ts`.
+
+**PROVADO EM TELA — CI, 03/11/2026:** a captura
+`evidence/email-teste-hostinger/confirmacao.png` mostra a confirmação com a caixa
+sintética de QA e o aviso de que nenhum lead ou contato externo será alcançado.
+O Playwright cancela a confirmação; não envia mensagem. Nenhuma mensagem real
+foi enviada; o aceite SMTP e o recebimento ainda precisam ser conferidos numa
+caixa real antes de considerar a entrega ponta a ponta provada.
