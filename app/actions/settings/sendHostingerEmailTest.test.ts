@@ -38,7 +38,10 @@ const CONNECTION_ID = "33333333-3333-4333-8333-333333333333";
 describe("sendHostingerEmailTest", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    deps.loadAuthUser.mockResolvedValue({ id: "11111111-1111-4111-8111-111111111111", support: null });
+    deps.loadAuthUser.mockResolvedValue({
+      id: "11111111-1111-4111-8111-111111111111",
+      support: null,
+    });
     deps.mfaEmDivida.mockResolvedValue(false);
     deps.resolveActiveOrg.mockResolvedValue({ orgId: ORGANIZATION_ID });
     deps.podeAdministrarEmpresa.mockReturnValue(true);
@@ -60,14 +63,16 @@ describe("sendHostingerEmailTest", () => {
 
     expect(deps.sendHostingerEmail).toHaveBeenCalledWith(
       { email: EMAIL, password: PASSWORD },
-      expect.objectContaining({ to: EMAIL, subject: "[DeskcommCRM] Teste da conexão de e-mail" }),
+      expect.objectContaining({ to: EMAIL, subject: "Teste da conexão de e-mail" }),
     );
-    expect(deps.audit).toHaveBeenCalledWith(expect.objectContaining({
-      action: "email.test_message_accepted",
-      organizationId: ORGANIZATION_ID,
-      resourceId: CONNECTION_ID,
-      metadata: { provider: "hostinger", smtp_accepted: true },
-    }));
+    expect(deps.audit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "email.test_message_accepted",
+        organizationId: ORGANIZATION_ID,
+        resourceId: CONNECTION_ID,
+        metadata: { provider: "hostinger", smtp_accepted: true },
+      }),
+    );
     expect(JSON.stringify(deps.audit.mock.calls)).not.toContain(EMAIL);
     expect(JSON.stringify(deps.audit.mock.calls)).not.toContain(PASSWORD);
   });
@@ -117,10 +122,12 @@ describe("sendHostingerEmailTest", () => {
 
     await expect(sendHostingerEmailTest()).resolves.toEqual({ ok: false, error: "send_failed" });
 
-    expect(deps.audit).toHaveBeenCalledWith(expect.objectContaining({
-      action: "email.test_message_failed",
-      metadata: { provider: "hostinger", smtp_accepted: false, failure: "send_failed" },
-    }));
+    expect(deps.audit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "email.test_message_failed",
+        metadata: { provider: "hostinger", smtp_accepted: false, failure: "send_failed" },
+      }),
+    );
     expect(JSON.stringify(deps.audit.mock.calls)).not.toContain("smtp_response_550");
     expect(JSON.stringify(deps.audit.mock.calls)).not.toContain(EMAIL);
     expect(JSON.stringify(deps.audit.mock.calls)).not.toContain(PASSWORD);

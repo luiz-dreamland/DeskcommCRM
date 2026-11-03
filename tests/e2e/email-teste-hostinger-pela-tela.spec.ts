@@ -69,7 +69,10 @@ test("admin confirma o destinatário antes de autorizar o teste da caixa", async
 
   await expect(page.getByRole("heading", { level: 1 })).toContainText("E-mail comercial");
   await expect(page.getByRole("button", { name: "Enviar e-mail de teste" })).toBeVisible();
-  await expect(page.getByText(new RegExp(mailbox))).toBeVisible();
+  const mailboxStatus = page
+    .locator("p")
+    .filter({ hasText: "passou na verificação de entrada e saída" });
+  await expect(mailboxStatus).toContainText(mailbox);
 
   await page.getByRole("button", { name: "Enviar e-mail de teste" }).click();
   const dialog = page.getByRole("alertdialog");

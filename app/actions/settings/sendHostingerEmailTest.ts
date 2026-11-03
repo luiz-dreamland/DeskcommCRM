@@ -53,9 +53,9 @@ export async function sendHostingerEmailTest(): Promise<SendHostingerEmailTestRe
 
   const result = await sendHostingerEmail(account.credentials, {
     to: account.credentials.email,
-    subject: "[DeskcommCRM] Teste da conexão de e-mail",
-    text: "Este é um e-mail de teste do DeskcommCRM enviado para a própria caixa conectada. Nenhum contato foi incluído. Se esta mensagem chegou, a saída SMTP foi aceita.",
-    html: "<p>Este é um e-mail de teste do DeskcommCRM enviado para a própria caixa conectada.</p><p>Nenhum contato foi incluído. Se esta mensagem chegou, a saída SMTP foi aceita.</p>",
+    subject: "Teste da conexão de e-mail",
+    text: "Esta mensagem foi enviada a pedido de um administrador para verificar a saída SMTP desta caixa. Nenhum contato foi incluído. Se ela chegou, o envio SMTP foi aceito.",
+    html: "<p>Esta mensagem foi enviada a pedido de um administrador para verificar a saída SMTP desta caixa.</p><p>Nenhum contato foi incluído. Se ela chegou, o envio SMTP foi aceito.</p>",
   });
 
   await audit({
