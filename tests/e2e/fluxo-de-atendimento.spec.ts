@@ -246,14 +246,19 @@ test("liga o módulo, cria um roteiro pela tela, o cliente responde pelo WhatsAp
       });
 
       // Fecha o painel antes de ligar as caixas, como faz a jornada do follow-up.
-      // O canto (20,20) ficou sob o header fixo no CI #3478. Ler a área
-      // exposta evita force e conserva a ação real de fechar clicando no fundo.
+      // O canto (20,20) ficou sob o header fixo no CI #3478. React Flow cobre
+      // o pane com o viewport; em área vazia, elementFromPoint retorna esse
+      // filho. Aceitar descendentes sem nó/aresta mantém o clique real no fundo
+      // sem depender da estrutura interna do canvas.
       const pontoLivre = await page.locator(".react-flow__pane").evaluate((pane) => {
         const r = pane.getBoundingClientRect();
         for (const fy of [0.6, 0.8, 0.4]) for (const fx of [0.4, 0.6, 0.2, 0.8]) {
           const x = r.left + r.width * fx;
           const y = r.top + r.height * fy;
-          if (document.elementFromPoint(x, y) === pane) return { x, y };
+          const hit = document.elementFromPoint(x, y);
+          if (hit && pane.contains(hit) && !hit.closest(".react-flow__node, .react-flow__edge")) {
+            return { x, y };
+          }
         }
         return null;
       });
