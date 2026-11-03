@@ -388,7 +388,37 @@ export function textoVisivel(html: string): string {
 
 /** Detecta um shell SPA vazio sem confundir páginas estáticas apenas concisas. */
 function pareceShellJavascript(html: string, texto = textoVisivel(html)): boolean {
-  if (!/<script\b[^>]*\b(?:src|type=["']module["'])/i.test(html)) return false;
+  // Estas posições avançam junto com as aberturas: sem elas, `[^>]*` repetido
+  // em dezenas de milhares de `<script` sem `>` custa tempo quadrático.
+  const aberturas = html.matchAll(/<script\b/gi);
+  const marcadores = Array.from(
+    html.matchAll(/\bsrc\b|type=["']module["']/gi),
+    (m) => m.index,
+  );
+  if (marcadores.length === 0) return false;
+  const gts = Array.from(html.matchAll(/>/g), (m) => m.index);
+  let proximoMarcador = 0;
+  let proximoGt = 0;
+  let temScriptCarregado = false;
+  for (const abertura of aberturas) {
+    const depoisDaAbertura = abertura.index + abertura[0].length;
+    while (
+      proximoMarcador < marcadores.length &&
+      marcadores[proximoMarcador]! < depoisDaAbertura
+    ) {
+      proximoMarcador++;
+    }
+    while (proximoGt < gts.length && gts[proximoGt]! < depoisDaAbertura) {
+      proximoGt++;
+    }
+    const marcador = marcadores[proximoMarcador];
+    const fimDaTag = gts[proximoGt];
+    if (marcador !== undefined && (fimDaTag === undefined || marcador < fimDaTag)) {
+      temScriptCarregado = true;
+      break;
+    }
+  }
+  if (!temScriptCarregado) return false;
   const raiz = RAIZ_SPA_VAZIA.exec(html);
   if (!raiz) return false;
   return (
@@ -452,6 +482,9 @@ function urlDaPaginaDeContato(html: string, baseUrl: string): string | null {
     return null;
   }
 
+  // Sem fechamento de âncora, a expressão que extrai conteúdo verificaria o
+  // restante da página para cada `<a` aberto. O resultado seria sempre vazio.
+  if (!/<\/a\s*>/i.test(html)) return null;
   const anchors = [...html.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a\s*>/gi)].slice(0, 500);
   const candidatos: Array<{ url: string; prioridade: number }> = [];
   for (const [, atributos, conteudo] of anchors) {

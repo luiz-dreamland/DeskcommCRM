@@ -53,7 +53,7 @@ export function semBlocosDeScript(html: string): string {
   let saida = "";
   let copiadoAte = 0;
   let busca = 0;
-  let proximoGt = -1;
+  const gts = posicoes(html, />/g);
   // Nome sem fechamento a partir de algum ponto não fecha em nenhuma abertura posterior.
   const semFechamento = new Set<string>();
   for (;;) {
@@ -62,7 +62,7 @@ export function semBlocosDeScript(html: string): string {
     if (!abertura) break;
     const nome = abertura[1]!.toLowerCase();
     const depoisDoNome = abertura.index + abertura[0].length;
-    if (proximoGt < depoisDoNome) proximoGt = html.indexOf(">", depoisDoNome);
+    const proximoGt = primeiroDesde(gts, depoisDoNome);
     if (proximoGt === -1) break;
     const fechamento = FECHAMENTO_DE_BLOCO[nome]!;
     fechamento.lastIndex = proximoGt + 1;
