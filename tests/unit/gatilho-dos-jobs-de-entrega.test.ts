@@ -72,12 +72,16 @@ const GATILHO_ESPERADO: Record<string, { condicao: string | null; efeito: string
       "Desligá-lo faz nenhuma versão ser fechada — sem erro em lugar nenhum.",
   },
   "release.yml::cortar-tag": {
-    condicao: "github.event_name == 'push'",
+    condicao:
+      ">- github.event_name == 'push' && ( " +
+      "contains(github.event.head_commit.message, '/release/') || " +
+      "contains(github.event.head_commit.message, 'release(') || " +
+      "startsWith(github.event.head_commit.message, 'Release ') )",
     efeito:
-      "Este job é quem CRIA E EMPURRA a tag `vX.Y.Z`, que é o gatilho da atualização " +
-      "do parque instalado inteiro. Desligá-lo faz a release parar em silêncio: nenhuma " +
-      "tag nasce, nenhuma imagem sai, `stable` congela, e a descoberta é um cliente " +
-      "rodando `update.sh` e não recebendo nada.",
+      "Este job só inicia quando o título/branch do commit indica um merge de release; " +
+      "a guarda no próprio job ainda confere remoção dos fragmentos e identidade do PR " +
+      "antes de criar a tag `vX.Y.Z`. Sem o filtro, cada push comum exigiria o App de " +
+      "release e falharia enquanto as credenciais do App não estivessem configuradas.",
   },
   "publish-image.yml::a-tag-veio-da-main": {
     condicao: null,
