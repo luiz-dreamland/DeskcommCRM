@@ -71,19 +71,27 @@ curl -s -o /dev/null -w '%{http_code}\n' https://<DOMAIN>/app
 ## 3. Fluxo completo (do código à produção)
 
 ```
-commit → push → PR → merge na main → CI publica imagem → VPS puxa
+commit → PR de produto → merge na main → workflow release → PR de versão
+                                                  ↓ merge
+                              tag e imagens numeradas → update.sh
 ```
 
 1. **Commit + push** numa branch de feature. Trabalho que fica só no disco da
    VPS não existe: o CI não o vê, some se a VPS for reconstruída, e é invisível
    pra qualquer outra pessoa.
-2. **PR e merge na `main`.** `publish-image.yml` dispara em push na `main` (ou
-   tag `v*`) e publica **quatro** imagens — `deskcommcrm`, `deskcomm-worker`,
-   `deskcomm-scheduler` e `deskcomm-voice-agent` — sempre na mesma versão. O build pesado roda nos
-   runners do GitHub, nunca na VPS do usuário.
-3. **Deploy na VPS.** Numa instalação real isto é `bash hostgator-setup-kit/update.sh`,
-   não um `up -d` na mão: ele puxa a tag publicada, re-aplica o `baseline.sql`,
-   faz backup antes e grava as quatro imagens no `.env`.
+2. **PR e merge na `main`.** `publish-image.yml` publica as imagens de `main`
+   para validar o build. Elas ainda não são a versão de produção.
+3. **Corte da versão.** Cadastre `RELEASE_APP_CLIENT_ID` e `RELEASE_APP_PRIVATE_KEY`
+   em Settings → Secrets and variables → Actions da repo
+   `luiz-dreamland/DeskcommCRM`; o GitHub App deve ter escrita em Contents e Pull requests.
+   Execute o workflow `release` em Actions. Ele calcula a versão a partir de `.changes/`
+   e abre um PR de release. Revise e integre o PR; o CI cria a tag numerada e publica
+   as quatro imagens (`deskcommcrm`, `deskcomm-worker`, `deskcomm-scheduler` e
+   `deskcomm-voice-agent`) para AMD64 e ARM64. Não crie tags manualmente.
+4. **Deploy na instalação.** Depois de confirmar o release e as quatro imagens,
+   rode `bash hostgator-setup-kit/update.sh` na pasta da instalação. O atualizador
+   usa a versão publicada, faz backup, aplica o `baseline.sql` e grava as quatro
+   imagens numeradas no `.env`.
 
 Para uma instalação nova em Oracle Ampere A1/Ubuntu (`linux/arm64`), siga
 [`oracle-arm64.md`](oracle-arm64.md). O workflow publica os índices AMD64/ARM64;
@@ -103,7 +111,7 @@ numérica** que será instalada. Substitua `vX.Y.Z` pela release publicada e
 
 ```bash
 CHECK_DIR="$(mktemp -d)"
-git clone --depth 1 --branch vX.Y.Z https://github.com/melgarafael/DeskcommCRM.git "$CHECK_DIR"
+git clone --depth 1 --branch vX.Y.Z https://github.com/luiz-dreamland/DeskcommCRM.git "$CHECK_DIR"
 bash "$CHECK_DIR/hostgator-setup-kit/preflight-upgrade.sh" \
   --installation /var/www/crm --to vX.Y.Z
 cd /var/www/crm

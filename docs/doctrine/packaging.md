@@ -73,7 +73,7 @@ worker:
 
 # CERTO — imagem publicada; o build fica ao lado, como escape
 worker:
-  image: ${WORKER_IMAGE:-ghcr.io/melgarafael/deskcomm-worker:stable}
+  image: ${WORKER_IMAGE:-ghcr.io/luiz-dreamland/deskcomm-worker:stable}
   build: { context: ., dockerfile: Dockerfile.worker }
 ```
 
@@ -109,13 +109,16 @@ OCI — no mínimo `source`, `revision`, `version`, `licenses` — e é constru�
   ela muda (`preflight_supabase_da_ref`), não na promoção: uma falha de rede ou do upstream
   ali seguraria a release de todos. Um manifesto prova distribuição, não chamada real.
 
-  > **Ativado.** `imagens-ok` **é** required check da `main`. Medido em 2026-08-14:
+  > No upstream, `imagens-ok` foi confirmado como required check da `main` em 2026-08-14:
   >
   > ```console
   > $ gh api repos/melgarafael/DeskcommCRM/branches/main/protection \
-  >     --jq '.required_status_checks.contexts|join(", ")'
+  >     --jq '.required_status_checks.contexts|join(", ")'  # medição histórica do upstream
   > verify, build-and-size, invariants, e2e, imagens-ok
   > ```
+  >
+  > Branch protection não é herdada pela fork. Confira a `main` desta repo separadamente:
+  > `gh api repos/luiz-dreamland/DeskcommCRM/branches/main/protection --jq '.required_status_checks.contexts|join(", ")'`.
   >
   > Este parágrafo já disse as duas coisas erradas, em ordem: primeiro afirmou no presente
   > que o check era obrigatório quando não era, depois — corrigido — afirmou que "ainda não
@@ -240,8 +243,9 @@ default que preserva o comportamento anterior**; se ela precisa existir, quem a 
 
 `GET /api/v1/health` responde a versão real da imagem em execução.
 
-> **Vale a partir da próxima release.** Nenhuma imagem já publicada carrega
-> `APP_VERSION` — medido: `docker run --rm ghcr.io/melgarafael/deskcommcrm:1.2.1 node -e
+> **Vale a partir da próxima release.** A medição abaixo foi feita na imagem do upstream;
+> nenhuma imagem daquela versão carregava `APP_VERSION`:
+> `docker run --rm ghcr.io/melgarafael/deskcommcrm:1.2.1 node -e
 > 'console.log(process.env.APP_VERSION)'` → `undefined`. Todo o parque instalado hoje
 > responde `desconhecido`, que é a resposta honesta e o motivo de o fallback não ser mais
 > um número plausível. O item 9 do checklist de release reprova contra a 1.2.1 de propósito.
@@ -405,11 +409,11 @@ pelo item 3. Um gate que aprova por erro de autenticação é pior que gate nenh
 # Cole no shell antes de começar. Funciona anonimamente (o pacote é público).
 ghcr_status() {   # $1=imagem  $2=tag  → 200 existe | 404 não existe | 403 pacote privado
   local t
-  t=$(curl -s "https://ghcr.io/token?scope=repository:melgarafael/$1:pull&service=ghcr.io" \
+  t=$(curl -s "https://ghcr.io/token?scope=repository:luiz-dreamland/$1:pull&service=ghcr.io" \
       | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
   curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $t" \
     -H 'Accept: application/vnd.oci.image.index.v1+json' \
-    "https://ghcr.io/v2/melgarafael/$1/manifests/$2"
+    "https://ghcr.io/v2/luiz-dreamland/$1/manifests/$2"
 }
 ```
 
@@ -438,7 +442,7 @@ do banco. É o passo que mais trava na estreia de uma imagem nova.
        Para cada uma, `docker buildx imagetools inspect` deve listar as duas plataformas.
        403 em alguma? Torne o pacote público ANTES de seguir
 [ ] 8. A imagem reporta a versão certa:
-       docker run --rm ghcr.io/melgarafael/deskcommcrm:X.Y.Z \
+       docker run --rm ghcr.io/luiz-dreamland/deskcommcrm:X.Y.Z \
          node -e 'console.log(process.env.APP_VERSION)'   → X.Y.Z
 [ ] 9. O workflow de release gerou a GitHub Release e o CHANGELOG da versão;
        não crie uma segunda release manualmente
@@ -446,7 +450,7 @@ do banco. É o passo que mais trava na estreia de uma imagem nova.
         for i in deskcommcrm deskcomm-worker deskcomm-scheduler deskcomm-voice-agent; do
           for t in X.Y.Z stable; do
             echo -n "$i:$t "; docker buildx imagetools inspect \
-              ghcr.io/melgarafael/$i:$t --format '{{.Manifest.Digest}}'; done; done
+            ghcr.io/luiz-dreamland/$i:$t --format '{{.Manifest.Digest}}'; done; done
         → o par de cada imagem tem que bater
         Não bateu? Alguma coisa republicou depois do push da tag. NÃO siga:
         um canal apontando para build diferente da versão é o invariante 3
@@ -491,7 +495,7 @@ parque instalado** percorre, e é o único que a suíte de CI não exercita.
 
 | Camada | Artefato | Garante |
 |---|---|---|
-| CI (mecânico) | `imagens-ok` em `publish-image.yml` | imagem quebrada **reprova o merge** — é required check da `main`. Meça antes de confiar: `gh api repos/melgarafael/DeskcommCRM/branches/main/protection --jq '.required_status_checks.contexts'` |
+| CI (mecânico) | `imagens-ok` em `publish-image.yml` | imagem quebrada **reprova o merge** — é required check da `main`. Meça antes de confiar: `gh api repos/luiz-dreamland/DeskcommCRM/branches/main/protection --jq '.required_status_checks.contexts'` |
 | CI (mecânico) | `tests/unit/packaging-artefato-do-cliente.test.ts` | serviço `build:`-only, pin upstream solto, `pull_policy` trocado e versão que mente reprovam |
 | CI (mecânico) | `tests/shell/update-guard.test.sh` | atualização que não pina as quatro imagens reprova |
 | CI (mecânico) | `hostgator-setup-kit/test-validators.sh` | instalação que nasce em tag móvel reprova |
@@ -503,13 +507,12 @@ parque instalado** percorre, e é o único que a suíte de CI não exercita.
 
 ## Decisões registradas
 
-**2026-08-13 — o namespace fica em `melgarafael`.** Uma consultoria externa recomendou criar
+**Decisão histórica do upstream (2026-08-13).** Uma consultoria externa recomendou criar
 uma org `deskcommcrm` e migrar, sob a premissa de que o compose apontava para uma org
-desvinculada do repo. A premissa era falsa: o compose sempre apontou para
-`ghcr.io/melgarafael/deskcommcrm`, que é o que o CI publica e o que está gravado no `.env` de
-todo cliente instalado. A string `deskcommcrm/deskcommcrm` existia num único lugar — uma URL
-de `git clone` em `docs/deploy-selfhost/README.md`, que retornava 404. O conserto proporcional
-ao defeito foi essa linha. Racional completo no ADR.
+desvinculada do repo. A premissa era falsa naquele upstream: o compose apontava para
+`ghcr.io/melgarafael/deskcommcrm`. Esse histórico explica a decisão original, mas não define
+esta fork. **Esta repo publica e instala de `ghcr.io/luiz-dreamland/*`**; os exemplos
+operacionais acima seguem esse namespace. O racional original permanece no ADR.
 
 **2026-08-13 — a régua de RAM é de operação, não de build.** A mesma consultoria argumentou
 que publicar a imagem derrubaria o requisito de 4 GB para 2 GB. Os 4 GB nunca foram custo de

@@ -21,9 +21,9 @@ seção A. A seção B é registro, e não tem caixa a marcar.
 O procedimento completo está em [`doctrine/packaging.md`](doctrine/packaging.md)
 §Checklist de release. O resumo verificável:
 
-**Antes de taguear**
+**Antes de solicitar o corte**
 
-- [ ] `CHANGELOG.md` tem a seção da versão, dizendo o que muda **para quem já instalou**
+- [ ] `git remote get-url origin` aponta para `https://github.com/luiz-dreamland/DeskcommCRM.git`
 - [ ] Nenhuma variável nova é obrigatória sem default (`git diff` em `.env.example` e `lib/env.ts`)
 - [ ] Mudança de schema saiu como **tripla**: `supabase/migrations/` + apêndice idempotente no
       `supabase/baseline.sql` + linha `-- manifest:` no cabeçalho do `.sql`. **O kit aplica só o baseline** — o que
@@ -34,8 +34,11 @@ O procedimento completo está em [`doctrine/packaging.md`](doctrine/packaging.md
       descobre é o usuário, na tela.
 - [ ] `pnpm test:db` verde localmente (aplica o baseline em install **e** update num Postgres limpo)
 - [ ] `pnpm test:shell` verde (é o único gate que exercita o kit)
+- [ ] O GitHub App de release está instalado somente em `luiz-dreamland/DeskcommCRM`,
+      com escrita em Contents e Pull requests; os Actions secrets
+      `RELEASE_APP_CLIENT_ID` e `RELEASE_APP_PRIVATE_KEY` estão configurados
 - [ ] O número da versão nunca foi publicado: `git tag --list 'vX.Y.Z'` vazio **e**
-      `ghcr_status deskcommcrm X.Y.Z` → **404**
+      `ghcr_status deskcommcrm X.Y.Z` → **404** na repo `luiz-dreamland/DeskcommCRM`
 
       Use a função `ghcr_status` de [`doctrine/packaging.md`](doctrine/packaging.md)
       §Checklist de release. **Não use `curl` cru no GHCR**: ele responde `401`, e um corpo de
@@ -44,14 +47,13 @@ O procedimento completo está em [`doctrine/packaging.md`](doctrine/packaging.md
 
 **Publicar**
 
-- [ ] `git tag vX.Y.Z && git push origin vX.Y.Z` a partir de um commit da `main`
-- [ ] `gh run list --workflow=publish-image.yml --limit 3` → verde
-- [ ] As **três** imagens existem na versão: `deskcommcrm`, `deskcomm-worker`, `deskcomm-scheduler`
-- [ ] `gh release create vX.Y.Z` com as notas do CHANGELOG
-- [ ] **Depois da release**, `stable` e `X.Y.Z` são o mesmo digest nas três imagens.
-      Nesta ordem, e não antes: na v1.3.0 a conferência rodou antes do
-      `gh release create`, passou, e o próprio `release` republicou a versão em
-      cima — verde às 19:53, divergente às 19:58.
+- [ ] Executar `release` em Actions; conferir a versão calculada e o PR de release aberto
+- [ ] O PR de release inclui a seção do `CHANGELOG.md` com o que muda para quem já instalou
+- [ ] Integrar o PR de release na `main`; deixar o CI criar a tag `vX.Y.Z`
+- [ ] `release` e `publish-image.yml` → verdes; não publique a tag manualmente
+- [ ] As **quatro** imagens existem na versão para AMD64 e ARM64: `deskcommcrm`,
+      `deskcomm-worker`, `deskcomm-scheduler` e `deskcomm-voice-agent`
+- [ ] **Depois da publicação**, `stable` e `X.Y.Z` apontam para os mesmos digests nas quatro imagens
 
 **Provar (o item que exige VPS, e não é opcional)**
 
