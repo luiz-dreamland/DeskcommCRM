@@ -82,6 +82,18 @@ describe("sendHostingerEmailTest", () => {
     expect(deps.audit).not.toHaveBeenCalled();
   });
 
+  it("exige a verificação em duas etapas antes de acessar ou enviar pela caixa", async () => {
+    deps.mfaEmDivida.mockResolvedValue(true);
+
+    await expect(sendHostingerEmailTest()).resolves.toEqual({
+      ok: false,
+      error: "mfa_required",
+    });
+
+    expect(deps.getHostingerEmailConnection).not.toHaveBeenCalled();
+    expect(deps.sendHostingerEmail).not.toHaveBeenCalled();
+  });
+
   it("recusa uma credencial que não corresponde à caixa saudável salva", async () => {
     deps.getHostingerEmailAccountForHealth.mockResolvedValue({
       state: "ready",
