@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from "vitest";
 
-import { sql } from "./gov-helpers";
+import { lastLine, sql } from "./gov-helpers";
 
 const ORGANIZATION_ID = "90000000-0000-4000-8000-000000000001";
 const USER_ID = "90000000-1111-4000-8000-000000000001";
@@ -46,10 +46,12 @@ describe("credenciais de e-mail permanecem exclusivas do servidor", () => {
 
   it("mantém leitura para service_role, o único papel que usa o adapter do servidor", () => {
     expect(
-      sql(`
+      lastLine(
+        sql(`
         set role service_role;
         select count(*) from ${TABLE} where id = '${CONNECTION_ID}';
-      `),
+        `),
+      ),
     ).toBe("1");
   });
 });
