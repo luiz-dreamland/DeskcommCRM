@@ -1,5 +1,3 @@
-import "server-only";
-
 import { randomUUID } from "node:crypto";
 
 import { logger } from "@/lib/logger";
@@ -59,6 +57,24 @@ export async function ensureHostingerEmailChannelSession(
   });
   if (error) {
     logger.error("[email.hostinger] falha ao criar sessão do canal", { code: error.code });
+    return false;
+  }
+  return true;
+}
+
+/** Stops the channel's mailbox session when its credential is removed. */
+export async function stopHostingerEmailChannelSession(
+  admin: Admin,
+  input: { organizationId: string; connectionId: string },
+): Promise<boolean> {
+  const { error } = await admin
+    .from("channel_sessions")
+    .update({ status: "STOPPED", status_reason: "email_connection_disconnected" })
+    .eq("organization_id", input.organizationId)
+    .eq("provider", "hostinger_email")
+    .eq("metadata->>email_connection_id", input.connectionId);
+  if (error) {
+    logger.error("[email.hostinger] falha ao parar sessão do canal", { code: error.code });
     return false;
   }
   return true;

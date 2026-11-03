@@ -171,42 +171,31 @@ describe("site-fetch", () => {
   });
 
   it("corpo gigante cancela o leitor sem ler tudo (prova do teto de 200KB)", async () => {
-    const PEDAÇO = "y".repeat(64 * 1024);
-    const TOTAL_PEDAÇOS = 8; // 512KB bem acima do teto
+    const PEDAÇO = "y".repeat(32 * 1024);
+    const TOTAL_PEDAÇOS = 16; // 512KB bem acima do teto
     let cancelado = false;
     let bytesLidos = 0;
     const fetchStream: typeof fetch = (async () => {
       let n = 0;
       const stream = new ReadableStream<Uint8Array>({
-        start(controller) {
-          for (; n < TOTAL_PEDAÇOS; n++) controller.enqueue(new TextEncoder().encode(PEDAÇO));
-          controller.close();
+        pull(controller) {
+          if (n >= TOTAL_PEDAÇOS) {
+            controller.close();
+            return;
+          }
+          n++;
+          const parte = new TextEncoder().encode(PEDAÇO);
+          bytesLidos += parte.byteLength;
+          controller.enqueue(parte);
         },
         cancel() { cancelado = true; },
       });
       return new Response(stream, { status: 200, headers: { "content-type": "text/html" } });
     }) as typeof fetch;
-    // Conta os bytes que o leitor realmente puxou, embrulhando o fetch.
-    const fetchConta: typeof fetch = (async (input: string | URL | Request, init?: RequestInit) => {
-      const res = await fetchStream(input, init);
-      const leitor = res.body!.getReader();
-      const enc = new TextEncoder();
-      void enc;
-      const medido = new ReadableStream<Uint8Array>({
-        async pull(controller) {
-          const { done, value } = await leitor.read();
-          if (done) { controller.close(); return; }
-          bytesLidos += value.byteLength;
-          controller.enqueue(value);
-        },
-        cancel(reason) { cancelado = true; return leitor.cancel(reason); },
-      });
-      return new Response(medido, { status: 200, headers: { "content-type": "text/html" } });
-    }) as typeof fetch;
-    const v = await auditarSite("https://grande.test/", AGORA, fetchConta, VERIFICADOR_LIBERADO);
+    const v = await auditarSite("https://grande.test/", AGORA, fetchStream, VERIFICADOR_LIBERADO);
     // Sem o abort, o leitor consumiria os 512KB e ninguém chamaria cancel.
     expect(cancelado).toBe(true);
-    expect(bytesLidos).toBeLessThan(TOTAL_PEDAÇOS * 64 * 1024);
+    expect(bytesLidos).toBeLessThan(TOTAL_PEDAÇOS * 32 * 1024);
     expect(bytesLidos).toBeLessThanOrEqual(300 * 1024);
     expect(v.conteudo_resumo === null || v.conteudo_resumo.length <= 1200).toBe(true);
   });

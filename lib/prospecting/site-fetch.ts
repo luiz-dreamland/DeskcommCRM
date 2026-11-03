@@ -403,8 +403,11 @@ function contatosPublicos(
   visivel: string,
   fonte?: string,
 ): NonNullable<SiteEnrichment["contatos_publicos"]> {
+  // Limites de comprimento do e-mail também evitam busca quadrática quando
+  // uma página longa contém sequências de letras sem nenhum endereço.
+  const emailPublico = /(?<![a-z0-9._%+-])[a-z0-9._%+-]{1,64}@[a-z0-9.-]{1,189}\.[a-z]{2,}(?![a-z0-9.-])/gi;
   const encontradosEmail = [
-    ...visivel.matchAll(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi),
+    ...visivel.matchAll(emailPublico),
     ...html.matchAll(/href\s*=\s*["']mailto:([^"'?#\s]+)/gi),
   ];
   const emails = [...new Set(encontradosEmail

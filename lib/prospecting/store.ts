@@ -241,12 +241,7 @@ export async function createSearch(
     // qualquer escrita: escolha desconhecida falha fechado sem deixar campanha
     // órfã no banco. As outras organizações resolvem as suas próprias — a
     // escolha de uma não vaza para a outra.
-    const { nome: nomeDoProvedor, provedor } = await provedorEIdentidadeDaOrganizacao(db, org);
-    if (nomeDoProvedor === "local-http")
-      throw new ProspectingError(
-        "Esta fonte local antiga não inicia novas buscas. Escolha outra fonte nas configurações da prospecção.",
-        410,
-      );
+    const { provedor } = await provedorEIdentidadeDaOrganizacao(db, org);
     // A credencial só é exigida de quem tem segredo POR ORGANIZAÇÃO: o
     // `searxng` lê a URL do engine da INSTALAÇÃO (`SEARXNG_BASE_URL` ou rede
     // Docker) e não tem credencial por organização para buscar aqui.

@@ -905,6 +905,29 @@ const HOSTS_DECLARADOS: Record<string, EntradaDeHost> = {
     motivo:
       "endpoint da plataforma que roda o crawler do Google Places (`lib/prospecting/provider.ts`). É o destino do request, com a chave da PRÓPRIA organização — trocar pelo domínio do revendedor quebraria a chamada, e esconder o nome não esconde para onde o dado vai.",
   },
+  "imap.hostinger.com": {
+    categoria: "FORNECEDOR",
+    motivo: "servidor IMAP da Hostinger usado pela caixa de e-mail que a própria organização conectou.",
+  },
+  "smtp.hostinger.com": {
+    categoria: "FORNECEDOR",
+    motivo: "servidor SMTP da Hostinger usado para enviar respostas pela caixa que a própria organização conectou.",
+  },
+  "api.firecrawl.dev": {
+    categoria: "FORNECEDOR",
+    motivo: "API de scraping opcional do Firecrawl. Só recebe URL pública selecionada pela organização e a chave configurada por ela.",
+  },
+  // Os domínios abaixo são comparados localmente para remover agregadores e redes sociais dos resultados de prospecção.
+  "apontador.com.br": { categoria: "RECONHECIMENTO", motivo: "agregador de empresas comparado localmente; o CRM não chama nem exibe este host." },
+  "bing.com": { categoria: "RECONHECIMENTO", motivo: "buscador reconhecido localmente para filtrar resultados; o CRM não chama nem exibe este host." },
+  "cylex.com.br": { categoria: "RECONHECIMENTO", motivo: "agregador de empresas comparado localmente; o CRM não chama nem exibe este host." },
+  "guiamais.com.br": { categoria: "RECONHECIMENTO", motivo: "agregador de empresas comparado localmente; o CRM não chama nem exibe este host." },
+  "solutudo.com.br": { categoria: "RECONHECIMENTO", motivo: "agregador de empresas comparado localmente; o CRM não chama nem exibe este host." },
+  "telelistas.net": { categoria: "RECONHECIMENTO", motivo: "agregador de empresas comparado localmente; o CRM não chama nem exibe este host." },
+  "tiktok.com": { categoria: "RECONHECIMENTO", motivo: "rede social removida da lista de sites comerciais; o CRM não chama nem exibe este host." },
+  "twitter.com": { categoria: "RECONHECIMENTO", motivo: "rede social removida da lista de sites comerciais; o CRM não chama nem exibe este host." },
+  "x.com": { categoria: "RECONHECIMENTO", motivo: "rede social removida da lista de sites comerciais; o CRM não chama nem exibe este host." },
+  "youtube.com": { categoria: "RECONHECIMENTO", motivo: "rede social removida da lista de sites comerciais; o CRM não chama nem exibe este host." },
   // ── identificador de fio: NÃO é destino de chamada nem texto de tela ──────
   "s.whatsapp.net": {
     categoria: "PROTOCOLO",
@@ -1351,6 +1374,9 @@ describe("catraca de host de terceiro no código que embarca", () => {
       // Decisão escrita (spec 24, auditoria de site): assinatura de
       // reconhecimento comparada no HTML baixado — nunca chamada, nunca exibida.
       "api.whatsapp.com",
+      // Decisão escrita (spec 24): fontes locais da prospecção são reconhecidas
+      // sem chamadas externas nem exibição do domínio.
+      "apontador.com.br",
       // Decisão escrita: painel de chaves da Requesty, o mesmo caso dos outros
       // CONSOLE (o link "Onde pegar a chave" da tela de Credenciais).
       "app.requesty.ai",
@@ -1360,6 +1386,7 @@ describe("catraca de host de terceiro no código que embarca", () => {
       // Decisão escrita (spec 24, auditoria de site): agregador de bio-links,
       // marca agregador sem fetch — nunca chamado, nunca exibido.
       "beacons.ai",
+      "bing.com",
       // Decisão escrita (spec 24, auditoria de site): assinatura de construtor
       // (Canva) — nunca chamada, nunca exibida.
       "canva.site",
@@ -1373,6 +1400,7 @@ describe("catraca de host de terceiro no código que embarca", () => {
       // Decisão escrita: é o painel de chaves do Jev, o mesmo caso dos outros
       // CONSOLE — o link "Onde pegar a chave" da tela de Credenciais.
       "console.typesafe.ai",
+      "cylex.com.br",
       "deskcomm.app",
       // Decisão escrita: painel de chaves do ElevenLabs, o mesmo caso dos outros
       // CONSOLE — o link "Onde pegar a chave" da tela de Credenciais.
@@ -1385,6 +1413,7 @@ describe("catraca de host de terceiro no código que embarca", () => {
       // comparada no HTML para detectar endereço/mapa — nunca chamada por causa
       // desta regra, nunca exibida.
       "google.com",
+      "guiamais.com.br",
       // Decisão escrita (spec 24, auditoria de site): marca agregador e conta
       // como link social no raio-X — nunca chamada, nunca exibida (a tela mostra
       // o rótulo traduzido).
@@ -1427,13 +1456,17 @@ describe("catraca de host de terceiro no código que embarca", () => {
       // Decisão escrita (spec 24, auditoria de site): assinatura de construtor
       // (Google Sites) — nunca chamada, nunca exibida.
       "sites.google.com",
+      "solutudo.com.br",
       // Decisão escrita (spec 24, auditoria de site): assinatura de HTML do
       // Wix no raio-X — nunca chamada, nunca exibida.
       "static.parastorage.com",
       // Decisão escrita (spec 24, auditoria de site): assinatura de HTML do
       // Wix no raio-X — nunca chamada, nunca exibida.
       "static.wixstatic.com",
+      "telelistas.net",
+      "tiktok.com",
       "tusitio.com",
+      "twitter.com",
       // Exemplo de link do WhatsApp gerado pela tela de Conversões (#924). Está
       // aqui, e não em FORNECEDOR, porque o produto NÃO fala com esse host: quem
       // abre o link é o visitante do site. Crescimento escrito, como a regra pede.
@@ -1446,6 +1479,8 @@ describe("catraca de host de terceiro no código que embarca", () => {
       // AUTORIDADE, porque não é painel, amostra nem plataforma: é o endereço
       // a que a lei manda o titular ir. País novo com lei revisada traz a sua.
       "www.cnpd.pt",
+      "x.com",
+      "youtube.com",
     ]);
   });
 

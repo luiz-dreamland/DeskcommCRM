@@ -47,6 +47,10 @@ export const hostingerEmailAdapter: ChannelAdapter = {
     sendFailed: "email_recusado",
     unknownError: "email_falhou",
   },
+  missingRecipient: {
+    errorCode: "missing_email_address",
+    errorMessage: "Contato sem endereço de e-mail para envio.",
+  },
 
   async send(envelope: OutboundEnvelope): Promise<{ externalId: string | null }> {
     if (envelope.kind !== "text") throw new Error("email_unsupported_message_type");

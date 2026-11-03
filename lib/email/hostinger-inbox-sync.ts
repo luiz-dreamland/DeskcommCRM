@@ -1,10 +1,9 @@
-import "server-only";
-
 import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { aplicarEfeitosPosEntrada } from "@/lib/channels/pos-entrada";
 import { marcarConversaComMensagem } from "@/lib/channels/marcar-conversa";
+import { nomeDoContato } from "@/lib/contacts/rotulo-do-contato";
 import { logger } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -341,7 +340,7 @@ async function completePendingInboundEffects(
       messageId: message.id,
       channelSessionId: message.channel_session_id,
       texto: body,
-      nomeDoContato: contact.display_name ?? contact.name,
+      nomeDoContato: nomeDoContato(contact),
       requestId: message.id,
       origem: "hostinger_imap",
       canal: "email",

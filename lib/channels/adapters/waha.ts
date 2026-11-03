@@ -115,6 +115,10 @@ export const wahaAdapter: ChannelAdapter = {
     sendFailed: "waha_error",
     unknownError: "waha_unknown",
   },
+  missingRecipient: {
+    errorCode: "missing_phone_number",
+    errorMessage: "Contato sem telefone para envio WhatsApp.",
+  },
 
   // A URL vem assinada pelo CDN do WhatsApp e EXPIRA (~9 dias, medido). Quem
   // chama baixa e persiste; guardar a URL faria a foto sumir sozinha depois.
