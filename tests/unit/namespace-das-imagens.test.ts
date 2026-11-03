@@ -128,7 +128,7 @@ const RECADO_AO_FORK =
   "IMG_NS em hostgator-setup-kit/_common.sh, o default das três linhas `image:` de " +
   "docker-compose.prod.yml, e as três *_IMAGE de .env.hostgator.example. Depois " +
   "atualize NAMESPACE_DESTE_REPO neste arquivo, e a URL do repositório em " +
-  "install.sh, comecar.sh, _common.sh e nos três Dockerfiles (os casos abaixo " +
+  "install.sh, comecar.sh, _common.sh e nos quatro Dockerfiles (os casos abaixo " +
   "prendem os seis). Todo o resto deriva de IMG_NS. Se você está lendo isto no CI " +
   "do seu próprio fork, houve engano nosso: lá este caso não cobra nada.";
 
@@ -243,7 +243,12 @@ describe("o kit aponta para o que o CI realmente publica", () => {
       expect(texto).toContain(`REPO_URL="\${REPO_URL:-${repo}.git}"`);
     }
     expect(COMUM).toContain(`local url="\${1:-${repo}.git}" ref`);
-    for (const dockerfile of ["Dockerfile", "Dockerfile.worker", "Dockerfile.scheduler"]) {
+    for (const dockerfile of [
+      "Dockerfile",
+      "Dockerfile.worker",
+      "Dockerfile.scheduler",
+      "Dockerfile.voice-agent",
+    ]) {
       expect(fs.readFileSync(path.join(RAIZ, dockerfile), "utf8")).toContain(
         `org.opencontainers.image.source="${repo}"`,
       );
