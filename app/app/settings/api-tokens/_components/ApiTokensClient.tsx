@@ -112,6 +112,12 @@ export function ApiTokensClient() {
     setScopes((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
   };
 
+  const prepareZoeReadOnlyToken = () => {
+    setName("Zoe — leitura do CRM");
+    setScopes(["mcp:read", "role:agent"]);
+    setExpiresInDays("90");
+  };
+
   return (
     <>
       <div className="flex sm:justify-end">
@@ -193,6 +199,17 @@ export function ApiTokensClient() {
               {t("O plaintext será mostrado apenas uma vez.")}
             </DialogDescription>
           </DialogHeader>
+          <div className="flex flex-col gap-3 rounded-md border border-primary/30 bg-primary/5 p-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1">
+              <p className="text-sm font-medium">{t("Conectar Zoe — somente leitura")}</p>
+              <p className="text-xs text-muted-foreground">
+                {t("Preenche o acesso mínimo ao MCP, sem escrita ou envio de mensagens, com validade de 90 dias.")}
+              </p>
+            </div>
+            <Button type="button" variant="secondary" size="sm" onClick={prepareZoeReadOnlyToken}>
+              {t("Usar perfil de leitura")}
+            </Button>
+          </div>
           <form onSubmit={onCreate} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="t-name">{t("Nome")}</Label>
