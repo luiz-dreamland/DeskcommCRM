@@ -91,7 +91,7 @@ describe("a fiação do predicado (quem responde × quem pergunta)", () => {
     expect(fonte.match(/criarEfeitoDasEscrituras\(\)/g) ?? []).toHaveLength(1);
     // a ponte recebe o coletor em ambos os modos; e-mail externo também limita o token a leitura
     expect(fonte).toMatch(
-      /preview \? \{ readOnly: true, efeitos: efeitosDoTurno \} : \{ readOnly: emailExternoNaoConfiavel, efeitos: efeitosDoTurno \}/,
+      /preview\s*\?\s*\{ readOnly: true, efeitos: efeitosDoTurno \}\s*:\s*\{ readOnly: emailExternoNaoConfiavel, efeitos: efeitosDoTurno \}/,
     );
     // o before-send recebe a leitura do MESMO coletor
     expect(fonte).toMatch(/registro: registroDoTurno\(\),/);
