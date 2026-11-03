@@ -7838,6 +7838,11 @@ export const DICIONARIO: Traducoes = {
   "O plaintext será mostrado apenas uma vez.": {
     es: "El token completo se mostrará solo una vez.",
   },
+  "Conectar Zoe — somente leitura": { es: "Conectar a Zoe — solo lectura" },
+  "Preenche o acesso mínimo ao MCP, sem escrita ou envio de mensagens, com validade de 90 dias.": {
+    es: "Completa el acceso mínimo al MCP, sin escritura ni envío de mensajes, con una validez de 90 días.",
+  },
+  "Usar perfil de leitura": { es: "Usar perfil de solo lectura" },
   "Worker de import": { es: "Worker de import" },
   "Expira em (dias) — opcional": { es: "Expira en (días) — opcional" },
   Criar: { es: "Crear" },
