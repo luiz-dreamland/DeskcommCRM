@@ -1,5 +1,5 @@
 ---
-impacto: corrigido
+impacto: nada_mudou
 secao: corrigido
 titulo: Conteúdo de e-mail externo não pode operar ferramentas mutantes
 ---
