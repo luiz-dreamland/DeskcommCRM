@@ -31,24 +31,32 @@ const CHANGELOG = path.join(RAIZ, "CHANGELOG.md");
  * GITHUB_REPOSITORY for release runs; local cuts use the configured `origin`.
  * The fallback belongs to this maintained Dreamland fork, never upstream.
  */
-function repositorioDoGitHub(): string {
-  const valido = (valor: string | undefined): valor is string =>
-    Boolean(valor && /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(valor.trim()));
-
-  const doWorkflow = process.env.GITHUB_REPOSITORY?.trim();
-  if (valido(doWorkflow)) return doWorkflow;
-
+function remotoDoGitHub(): string | undefined {
   try {
-    const remoto = execFileSync("git", ["remote", "get-url", "origin"], {
+    return execFileSync("git", ["remote", "get-url", "origin"], {
       cwd: RAIZ,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
     }).trim();
-    const caminho = /github\.com[:/]([^/\s]+\/[^/\s]+?)(?:\.git)?$/i.exec(remoto)?.[1];
-    if (valido(caminho)) return caminho;
   } catch {
-    // A cópia pode não ter metadados Git; use o repositório que mantém este fork.
+    return undefined;
   }
+}
+
+export function repositorioDoGitHub(
+  doWorkflow = process.env.GITHUB_REPOSITORY,
+  remoto = remotoDoGitHub(),
+): string {
+  const valido = (valor: string | undefined): valor is string =>
+    Boolean(valor && /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(valor.trim()));
+
+  const repoDoWorkflow = doWorkflow?.trim();
+  if (valido(repoDoWorkflow)) return repoDoWorkflow;
+
+  const caminho = remoto
+    ? /github\.com[:/]([^/\s]+\/[^/\s]+?)(?:\.git)?$/i.exec(remoto)?.[1]
+    : undefined;
+  if (valido(caminho)) return caminho;
 
   return "luiz-dreamland/DeskcommCRM";
 }

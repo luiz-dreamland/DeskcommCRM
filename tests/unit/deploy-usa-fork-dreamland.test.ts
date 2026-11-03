@@ -14,6 +14,7 @@ const GUIAS_DE_INSTALACAO = [
   "hostgator-setup-kit/README.md",
   "hostgator-setup-kit/CLAUDE.md",
   "hostgator-setup-kit/diagnostico.sh",
+  "scripts/instalar-guias.sh",
 ];
 
 describe("fontes de instalação do Dreamland CRM", () => {
