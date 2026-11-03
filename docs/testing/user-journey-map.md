@@ -4169,8 +4169,9 @@ visível também têm testes unitários em
 `app/app/settings/email/_settings.test.tsx` e
 `app/actions/settings/sendHostingerEmailTest.test.ts`.
 
-**Pendente de prova no head atual:** o E2E do CI precisa gerar e inspecionar
-`evidence/email-teste-hostinger/confirmacao.png`. Nenhuma mensagem real foi
-enviada; a tela só afirma que o SMTP aceitou quando a action for confirmada, e
-isso ainda precisa ser conferido numa caixa real antes de considerar a entrega
-ponta a ponta provada.
+**PROVADO EM TELA — CI, 03/11/2026:** a captura
+`evidence/email-teste-hostinger/confirmacao.png` mostra a confirmação com a caixa
+sintética de QA e o aviso de que nenhum lead ou contato externo será alcançado.
+O Playwright cancela a confirmação; não envia mensagem. Nenhuma mensagem real
+foi enviada; o aceite SMTP e o recebimento ainda precisam ser conferidos numa
+caixa real antes de considerar a entrega ponta a ponta provada.
