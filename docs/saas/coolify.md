@@ -274,7 +274,7 @@ nada, espere mais um pouco e rode de novo.
 Na VPS, baixe o CRM e entre na pasta:
 
 ```bash
-cd ~ && git clone --depth 1 https://github.com/melgarafael/DeskcommCRM.git deskcommcrm && cd deskcommcrm
+cd ~ && git clone --depth 1 https://github.com/luiz-dreamland/DeskcommCRM.git deskcommcrm && cd deskcommcrm
 ```
 
 Agora rode o instalador **com todas as variáveis**, trocando só o domínio no fim. Copie o
