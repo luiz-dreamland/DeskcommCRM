@@ -42,10 +42,20 @@ jobs:
     permissions:
       contents: read
     steps:
+      - name: Conferir as credenciais do App de release
+        env:
+          RELEASE_CLIENT_ID: ${{ secrets.RELEASE_APP_CLIENT_ID }}
+          RELEASE_PRIVATE_KEY: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+        run: |
+          if [ -z "${RELEASE_CLIENT_ID}" ] || [ -z "${RELEASE_PRIVATE_KEY}" ]; then
+            echo "::error::Configure RELEASE_APP_CLIENT_ID e RELEASE_APP_PRIVATE_KEY em Settings > Secrets and variables > Actions deste repositório."
+            exit 1
+          fi
+
       - uses: actions/create-github-app-token@v3
         id: token
         with:
-          client-id: ${{ secrets.RELEASE_APP_ID }}
+          client-id: ${{ secrets.RELEASE_APP_CLIENT_ID }}
           private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
 
       - uses: actions/checkout@v7
@@ -117,10 +127,20 @@ jobs:
       # Leitura só — quem escreve continua sendo o token do App.
       pull-requests: read
     steps:
+      - name: Conferir as credenciais do App de release
+        env:
+          RELEASE_CLIENT_ID: ${{ secrets.RELEASE_APP_CLIENT_ID }}
+          RELEASE_PRIVATE_KEY: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+        run: |
+          if [ -z "${RELEASE_CLIENT_ID}" ] || [ -z "${RELEASE_PRIVATE_KEY}" ]; then
+            echo "::error::Configure RELEASE_APP_CLIENT_ID e RELEASE_APP_PRIVATE_KEY em Settings > Secrets and variables > Actions deste repositório."
+            exit 1
+          fi
+
       - uses: actions/create-github-app-token@v3
         id: token
         with:
-          client-id: ${{ secrets.RELEASE_APP_ID }}
+          client-id: ${{ secrets.RELEASE_APP_CLIENT_ID }}
           private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
 
       - uses: actions/checkout@v7

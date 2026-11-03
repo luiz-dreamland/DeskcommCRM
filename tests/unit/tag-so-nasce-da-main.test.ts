@@ -62,7 +62,7 @@ describe("a tag nasce no CI, e nunca do GITHUB_TOKEN", () => {
     // GitHub). Se a tag nascesse dele, `publish-image.yml` nunca rodaria: a tag
     // existiria, nenhum erro apareceria, e NENHUMA VPS receberia a atualização.
     expect(release).toContain("actions/create-github-app-token");
-    expect(release).toContain("secrets.RELEASE_APP_ID");
+    expect(release).toContain("secrets.RELEASE_APP_CLIENT_ID");
     expect(release).toContain("secrets.RELEASE_APP_PRIVATE_KEY");
   });
 
@@ -106,7 +106,11 @@ describe("a tag nasce no CI, e nunca do GITHUB_TOKEN", () => {
   });
 
   it("a tag só é criada em push na main, nunca num dispatch de branch qualquer", () => {
-    expect(job(release, "cortar-tag")).toMatch(/if:\s*github\.event_name == 'push'/);
+    const t = job(release, "cortar-tag");
+    expect(t).toMatch(/github\.event_name == 'push'/);
+    expect(t).toContain("contains(github.event.head_commit.message, '/release/')");
+    expect(t).toContain("contains(github.event.head_commit.message, 'release(')");
+    expect(t).toContain("startsWith(github.event.head_commit.message, 'Release ')");
     expect(release).toMatch(/push:\s*\n\s*branches:\s*\[main\]/);
   });
 });
