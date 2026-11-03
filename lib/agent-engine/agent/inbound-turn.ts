@@ -717,17 +717,34 @@ export async function loadInboundBodyForJob(
  */
 export async function loadInboundForJob(
   db: Queryable,
-  input: { tenantId: string; conversationId: string; inboundMessageId: string },
-): Promise<{ body: string; sender: RemetenteDeGrupo | null; externalEmail: boolean } | null> {
-  const result = await db.query<CorpoDaMensagemRow & { metadata: unknown }>(
-    `select type, body, media_url, media_storage_path, media_derived_text, metadata
+  input: {
+    tenantId: string;
+    conversationId: string;
+    inboundMessageId: string;
+    channelSessionId?: string;
+  },
+): Promise<{
+  body: string;
+  sender: RemetenteDeGrupo | null;
+  externalEmail: boolean;
+  channelProvider: Awaited<ReturnType<typeof loadChannelProvider>> | null;
+} | null> {
+  const providerSelect = input.channelSessionId === undefined
+    ? 'null::text'
+    : '(select provider from channel_sessions where organization_id = $1 and id = $4::uuid)';
+  const values = input.channelSessionId === undefined
+    ? [input.tenantId, input.conversationId, input.inboundMessageId]
+    : [input.tenantId, input.conversationId, input.inboundMessageId, input.channelSessionId];
+  const result = await db.query<CorpoDaMensagemRow & { metadata: unknown; channel_provider: string | null }>(
+    `select type, body, media_url, media_storage_path, media_derived_text, metadata,
+            ${providerSelect} as channel_provider
        from messages
       where organization_id = $1
         and conversation_id = $2
         and id = $3
         and direction = 'inbound'
       limit 1`,
-    [input.tenantId, input.conversationId, input.inboundMessageId],
+    values,
   );
   const row = result.rows[0];
   if (row === undefined) return null;
@@ -738,6 +755,7 @@ export async function loadInboundForJob(
     body: corpoDaMensagem(row),
     sender: lerRemetenteDeGrupo(row.metadata),
     externalEmail: metadata.external_content_untrusted === true,
+    channelProvider: row.channel_provider as Awaited<ReturnType<typeof loadChannelProvider>> | null,
   };
 }
 
@@ -2924,7 +2942,7 @@ async function executarTurnoDoAgente(
   // abertura anuncia ao modelo que o cliente mandou `[audio]`.
   await esperarMidiaDoTurno();
 
-  const [playbook, [skills, inboundDoJob], orgMemory, [previous, leadState], providerDaSessao] =
+  const [playbook, [skills, inboundDoJob], orgMemory, [previous, leadState], providerLido] =
     await Promise.all([
       (async () => {
         const prospectingContext =
@@ -2950,6 +2968,7 @@ async function executarTurnoDoAgente(
                 tenantId,
                 conversationId: input.conversationId,
                 inboundMessageId: input.inboundMessageId,
+                channelSessionId: input.channelSessionId,
               }),
         ] as const)(),
       // Fase 1 (harness): memória geral da org — prefixo estável, resolvida a cada
@@ -2963,12 +2982,16 @@ async function executarTurnoDoAgente(
         ] as const)(),
       preview && !preview.channelId
         ? Promise.resolve(DEFAULT_CHANNEL_PROVIDER)
-        : loadChannelProvider(pool, tenantId, input.channelSessionId),
+        : input.inboundMessageId === undefined
+          ? loadChannelProvider(pool, tenantId, input.channelSessionId)
+          : Promise.resolve(null),
     ]);
   // A mensagem canônica do job: o TEXTO que este turno responde e, num grupo,
   // QUEM a escreveu (#2729). As duas saem da mesma linha, numa leitura só.
   const currentInboundText = inboundDoJob === null ? null : inboundDoJob.body;
   const currentInboundSender = inboundDoJob === null ? null : inboundDoJob.sender;
+  const providerDaSessao =
+    providerLido ?? inboundDoJob?.channelProvider ?? DEFAULT_CHANNEL_PROVIDER;
   const emailExternoNaoConfiavel =
     inboundDoJob?.externalEmail === true || providerDaSessao === 'hostinger_email';
   const skillIndex = renderSkillIndex(skills);
@@ -3027,7 +3050,7 @@ async function executarTurnoDoAgente(
           agentId: agentConfig.agentId,
           vozEnabled: agentConfig.vozEnabled,
           vozQuando: agentConfig.vozQuando,
-          voiceNote: capabilitiesOf(await loadChannelProvider(pool, tenantId, input.channelSessionId)).voiceNote,
+          voiceNote: capabilitiesOf(providerDaSessao).voiceNote,
           inboundType:
             input.inboundMessageId === undefined
               ? null
