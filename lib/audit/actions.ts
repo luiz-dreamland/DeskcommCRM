@@ -1425,6 +1425,9 @@ export const AUDIT_ACTIONS = [
   // O admin autoriza ou pausa a leitura de novas mensagens na Inbox do CRM.
   "email.inbox_sync_enabled",
   "email.inbox_sync_disabled",
+  // Tentativa manual e confirmada de enviar uma mensagem para a própria caixa.
+  "email.test_message_accepted",
+  "email.test_message_failed",
 ] as const;
 
 /** Um código de auditoria. Derivado de `AUDIT_ACTIONS` — não redigite a lista. */

@@ -27,7 +27,8 @@
     { "id": "platform-mail", "lane": "provedores", "col": 4, "type": "external", "label": "SMTP / Resend da instalação — e-mail de sistema e fallback sem caixa da empresa" },
     { "id": "system-mail", "lane": "app", "col": 1, "type": "component", "label": "Convites, cobrança, LGPD e recuperação de conta" },
     { "id": "inbound-worker", "lane": "app", "col": 2, "type": "component", "label": "Cron IMAP: lease por caixa, cursor CAS, Inbox e efeitos pós-entrada" },
-    { "id": "email-agent-turn", "lane": "app", "col": 3, "type": "security", "label": "Turno externo: leituras internas apenas, sem MCP remoto nem mcp:write; resposta passa pela cadeia normal" }
+    { "id": "email-agent-turn", "lane": "app", "col": 3, "type": "security", "label": "Turno externo: leituras internas apenas, sem MCP remoto nem mcp:write; resposta passa pela cadeia normal" },
+    { "id": "email-test", "lane": "app", "col": 2, "type": "route", "label": "Teste manual: admin confirma, destino fixo na própria caixa, tentativa auditada" }
   ],
   "edges": [
     { "id": "e1", "from": "admin", "to": "configuracao", "label": "informa endereço e senha" },
@@ -48,14 +49,19 @@
     { "id": "e9", "from": "roteador", "to": "platform-mail", "label": "sem caixa configurada, mantém comportamento legado" },
     { "id": "e10", "from": "system-mail", "to": "platform-mail", "label": "permanece fora das credenciais da organização" },
     { "id": "e18", "from": "inbound-worker", "to": "email-agent-turn", "label": "despacha mensagem marcada external_content_untrusted" },
-    { "id": "e19", "from": "email-agent-turn", "to": "roteador", "label": "resposta somente ao fio original, sujeita aos gates de envio" }
+    { "id": "e19", "from": "email-agent-turn", "to": "roteador", "label": "resposta somente ao fio original, sujeita aos gates de envio" },
+    { "id": "e20", "from": "admin", "to": "email-test", "label": "confirma uma mensagem de teste para a própria caixa" },
+    { "id": "e21", "from": "email-test", "to": "connection", "label": "carrega somente a credencial saudável da organização" },
+    { "id": "e22", "from": "email-test", "to": "smtp-hostinger", "label": "envia conteúdo fixo ao endereço da caixa conectada" },
+    { "id": "e23", "from": "smtp-hostinger", "to": "email-test", "label": "retorna aceite ou falha sem afirmar entrega final" },
+    { "id": "e24", "from": "email-test", "to": "admin", "label": "mostra o resultado e grava auditoria sem endereço ou conteúdo" }
   ],
   "contracts": {
     "status": "saída, entrada e restrição determinística de ferramentas implementadas localmente nesta branch; conexão, mensagens e respostas reais ainda não verificadas no Mac",
     "spec": "docs/specs/33-spec-email-channel-zoe.md",
     "no_links": [
       "Falha ou credencial inválida de uma caixa salva não faz fallback para outro remetente.",
-      "A conexão e a verificação nunca enviam mensagens de teste.",
+      "A autenticação não envia mensagens; o teste de recebimento exige confirmação do admin e só envia para a própria caixa.",
       "Não há conexão de caixa configurada nem mensagens reais importadas ou respondidas.",
       "E-mail de sistema não usa o remetente da organização."
     ],
