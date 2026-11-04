@@ -72,12 +72,19 @@ const searchInputShape = {
 export const crmSearchContacts: McpToolDefinition<typeof searchInputShape> = {
   name: "crm_search_contacts",
   description:
-    "Busca contatos do CRM por nome, email ou telefone. Retorna ate 50 matches com id, nome, telefone, email, tags e timestamps. Sempre escopado a organization do token." +
-    " Em conversa de atendimento, devolve apenas o contato desta conversa.",
+    "Busca contatos do CRM por nome, email ou telefone, sempre escopado a organization do token. " +
+    "Para integrações com token de servidor, retorna somente a quantidade de correspondências e se há mais resultados — nunca nomes, IDs, telefones, emails ou cursor. " +
+    "Em uma conversa com contexto confiável, devolve somente os dados do contato daquela conversa.",
   inputSchema: searchInputShape,
   category: "read",
   requiresRole: "agent",
   requiresScope: "mcp:read",
+  // O termo pode ser nome, telefone ou email do cliente. Metadados de auditoria
+  // registram somente que houve busca e o limite, nunca o valor pesquisado.
+  redigirParaAuditoria: (args) => ({
+    query_supplied: typeof args.query === "string",
+    ...(typeof args.limit === "number" ? { limit: args.limit } : {}),
+  }),
   handler: async (input, ctx) => {
     const doTurno = ctx.contatoDoTurno;
     const result = await listContactsHandler(
@@ -123,6 +130,18 @@ export const crmSearchContacts: McpToolDefinition<typeof searchInputShape> = {
     // A paginação morre junto: `cursor`/`has_more` descrevem a varredura da
     // ORGANIZAÇÃO, e a próxima página voltaria a ser varredura.
     const visiveis = doTurno ? result.contacts.filter((c) => c.id === doTurno) : result.contacts;
+
+    // Integrações externas sem contexto de conversa precisam conseguir evitar
+    // duplicatas, mas não precisam receber a ficha de clientes. A resposta
+    // agregada preserva o caso de uso comercial sem enviar PII ao modelo nem
+    // permitir paginação/enumeração por cursor. O token continua limitado à
+    // organização de origem e a consulta exclui contatos pessoais no handler.
+    if (ctx.actor.type === "api_token") {
+      return {
+        match_count: visiveis.length,
+        has_more: result.has_more,
+      };
+    }
 
     return {
       contacts: visiveis.map((c) => ({

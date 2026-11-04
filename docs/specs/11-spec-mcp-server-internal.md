@@ -128,18 +128,29 @@ inputSchema: z.object({
   cursor: z.string().optional()
 })
 
-outputSchema: z.object({
-  contacts: z.array(z.object({
-    id: z.string().uuid(),
-    name: z.string().nullable(),
-    phone: z.string().nullable(),
-    email: z.string().nullable(),
-    tags: z.array(z.string()),
-    created_at: z.string()
-  })),
-  has_more: z.boolean()
-})
+outputSchema: z.union([
+  z.object({
+    contacts: z.array(z.object({
+      id: z.string().uuid(),
+      name: z.string().nullable(),
+      phone: z.string().nullable(),
+      email: z.string().nullable(),
+      tags: z.array(z.string()),
+      created_at: z.string()
+    })),
+    cursor: z.string().nullable(),
+    has_more: z.boolean()
+  }),
+  z.object({ match_count: z.number().int(), has_more: z.boolean() })
+])
 ```
+
+**Minimização para integrações:** quando o ator é um token de servidor (`api_token`), a busca
+retorna somente `{ match_count, has_more }`; não envia nome, ID, telefone, email nem cursor. Isso
+permite conferir duplicidade sem expor fichas ao modelo externo. A busca continua limitada à
+organização do token e não inclui contatos marcados como pessoais. Em um turno interno com contexto
+confiável, a resposta contém somente o contato daquela conversa. O termo e o cursor também são
+omitidos da auditoria; registra-se apenas que houve consulta e o limite aplicado.
 
 #### `crm_get_contact`
 **Maps to**: `GET /api/v1/contacts/:id`

@@ -12,8 +12,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  * - LEITURA POR ID: a MESMA recusa, byte a byte, para "não existe" e para "é
  *   de outro cliente" — um uuid não vira oráculo de existência.
  *
- * Sem contato do turno — rota HTTP, MCP externo, pessoa — nada muda, e cada
- * bloco termina com esse controle.
+ * Sem contato do turno, a busca/lista do runtime nativo continua alcançando a
+ * organização; cada bloco termina com esse controle. Tokens de integração
+ * (`api_token`) recebem somente dados agregados, sem PII.
  *
  * A asserção é sobre a CADEIA: monta a ferramenta como o turno monta
  * (`pickToolsFromMcp`) e lê o que voltou ao modelo. O dublê do banco APLICA os

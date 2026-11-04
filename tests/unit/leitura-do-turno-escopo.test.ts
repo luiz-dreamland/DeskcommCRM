@@ -23,8 +23,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  * o re-deriva), e `crm_search_contacts` serve OS DOIS pacotes (`atender` e
  * `vender`), então "qual pacote está em uso" não é distinguível ali. Quem não
  * tem contato do turno — rota HTTP, MCP externo, agente sem conversa — segue
- * exatamente como antes, e os controles no fim provam isso. O Operador NÃO está
- * nesse grupo: o turno dele também recebe `contactId` (`operator-turn.ts`).
+ * exatamente como antes no runtime nativo. Tokens de integração (`api_token`)
+ * recebem somente contagem agregada, sem ficha ou identificadores, coberto em
+ * `contato-pessoal-mcp.test.ts`. O Operador NÃO está nesse grupo: o turno dele
+ * também recebe `contactId` (`operator-turn.ts`).
  */
 
 vi.mock("@/app/api/v1/contacts/_handler", async (original) => ({
