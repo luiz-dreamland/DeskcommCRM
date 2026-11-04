@@ -56,6 +56,9 @@ services:
     # um serviço build-only é pulado pelo pull e NUNCA é atualizado. Aqui a
     # imagem continua vindo do registro.
     restart: unless-stopped
+    # No Docker Desktop do Mac, o DNS encaminhado pelo host falhou para o
+    # pooler Supabase (EAI_AGAIN); estes upstreams foram testados nos containers.
+    dns: [1.1.1.1, 1.0.0.1]
     env_file: .env
     environment:
       SUPABASE_DB_ADMIN_URL: ""
@@ -169,6 +172,7 @@ services:
     # fecha é reprovado por `workers/agent-worker/prazo-do-shutdown-comeca-no-sinal.test.ts`.
     stop_grace_period: ${WORKER_STOP_GRACE_PERIOD:-40s}
     restart: unless-stopped
+    dns: [1.1.1.1, 1.0.0.1]
     env_file: .env
     environment:
       # dentro da rede do compose, o WAHA é o serviço 'waha' na porta interna 3000
@@ -300,6 +304,7 @@ services:
       context: .
       dockerfile: Dockerfile.scheduler
     restart: unless-stopped
+    dns: [1.1.1.1, 1.0.0.1]
     depends_on:
       app:
         condition: service_healthy
