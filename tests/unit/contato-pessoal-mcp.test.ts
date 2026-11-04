@@ -150,7 +150,7 @@ describe("crm_get_contact recusa pessoal no tool (não na ficha da tela)", () =>
 });
 
 describe("crm_search_contacts carrega is_personal da coluna (a exclusão chega na etapa 13)", () => {
-  function bancoBusca() {
+  function bancoBusca(linhas: unknown[] = [contato(true), contato(false)]) {
     return {
       from: (tabela: string) => ({
         select: () => {
@@ -180,7 +180,7 @@ describe("crm_search_contacts carrega is_personal da coluna (a exclusão chega n
             limit: () => q,
             or: () => q,
             then: (ok) =>
-              Promise.resolve({ data: [contato(true), contato(false)], error: null }).then(ok),
+              Promise.resolve({ data: linhas, error: null }).then(ok),
           };
           return q;
         },
@@ -194,6 +194,40 @@ describe("crm_search_contacts carrega is_personal da coluna (a exclusão chega n
     };
     expect(r.contacts.find((c) => c.id === CONTATO_PESSOAL)?.is_personal).toBe(true);
     expect(r.contacts.find((c) => c.id === CONTATO_LIVRE)?.is_personal).toBe(false);
+  });
+
+  it("token de integração recebe só contagem, sem PII, IDs ou cursor", async () => {
+    const dado = {
+      ...contato(false),
+      id: CONTATO_LIVRE,
+      display_name: "Empresa Exemplo",
+      email: "lead@exemplo.com",
+      phone_number: "+5511999999999",
+    };
+    const ctx = {
+      supabase: bancoBusca([dado]),
+      organizationId: ORG,
+      role: "agent",
+      actor: { type: "api_token", id: "token-zoe" },
+      apiTokenId: "tok-1",
+      requestId: "req-1",
+    } as never;
+
+    const r = await crmSearchContacts.handler({ query: "lead@exemplo.com", limit: 10 }, ctx);
+
+    expect(r).toEqual({ match_count: 1, has_more: false });
+    expect(JSON.stringify(r)).not.toContain(CONTATO_LIVRE);
+    expect(JSON.stringify(r)).not.toContain("Empresa Exemplo");
+    expect(JSON.stringify(r)).not.toContain("lead@exemplo.com");
+    expect(JSON.stringify(r)).not.toContain("+5511999999999");
+  });
+
+  it("remove termo e cursor da auditoria da busca", () => {
+    expect(crmSearchContacts.redigirParaAuditoria?.({
+      query: "lead@exemplo.com",
+      limit: 10,
+      cursor: "cursor-com-id",
+    })).toEqual({ query_supplied: true, limit: 10 });
   });
 });
 

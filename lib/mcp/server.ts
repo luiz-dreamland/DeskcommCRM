@@ -31,6 +31,7 @@ function summarizeResult(result: unknown): string | undefined {
   if (!result || typeof result !== "object") return undefined;
   const r = result as Record<string, unknown>;
   if (Array.isArray(r.contacts)) return `${r.contacts.length} contacts`;
+  if (typeof r.match_count === "number") return `${r.match_count} contact matches`;
   if (Array.isArray(r.conversations)) return `${r.conversations.length} conversations`;
   if (Array.isArray(r.messages)) return `${r.messages.length} messages`;
   if (typeof r.id === "string") return `id=${r.id}`;
