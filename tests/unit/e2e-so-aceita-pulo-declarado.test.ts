@@ -40,16 +40,23 @@ function scriptDoAgregador(): string {
 
 const SCRIPT = scriptDoAgregador();
 const DESFECHOS = "success failure skipped cancelled";
+const EVENTOS = "pull_request push workflow_dispatch";
+
+const GATILHOS = (() => {
+  const workflow = readFileSync(".github/workflows/e2e.yml", "utf-8");
+  const bloco = /^on:\r?\n([\s\S]*?)(?=^permissions:)/m.exec(workflow)?.[1];
+  return bloco ?? "";
+})();
 
 // Uma invocação de bash para a matriz inteira; o código de saída é lido FORA de
 // `if` (dentro da condição o bash desliga o `set -e` do subshell e a sonda
 // aceitaria tudo). O eixo `HEAD` é o do #2449: sem exportá-lo o `set -u` do
-// script derrubaria as 192 linhas com `unbound variable` e a sonda devolveria
+// script derrubaria as 288 linhas com `unbound variable` e a sonda devolveria
 // `[]` — o falso verde de vacuidade, em escala.
 function combinacoesAceitas(): string[] {
   const programa = `
 for HEAD in nao sim; do
-for EVENTO in pull_request push; do
+for EVENTO in ${EVENTOS}; do
  for ALCANCE in sim nao ""; do
   for PORTAO in ${DESFECHOS}; do
    for PARTES in ${DESFECHOS}; do
@@ -72,33 +79,45 @@ true`;
 }
 
 describe("e2e só aceita o pulo declarado", () => {
+  it("permite iniciar uma medição completa pelo botão manual do GitHub", () => {
+    expect(GATILHOS).toMatch(/^  workflow_dispatch:\s*$/m);
+  });
+
   it("controle positivo: o recorte pegou o script que lê os quatro resultados", () => {
     for (const v of ["$PORTAO", "$ALCANCE", "$PARTES", "$EVENTO", "$HEAD_VELHO"]) {
       expect(SCRIPT).toContain(v);
     }
   });
 
-  it("da matriz inteira de desfechos (192), passa exatamente o que foi declarado", { timeout: 60_000 }, () => {
-    expect(combinacoesAceitas().sort()).toEqual(
-      [
-        // PR que alcança: as partes têm de passar.
-        "nao pull_request sim success success",
-        // PR que não alcança: partes puladas, e SÓ puladas — `failure` não é pulo.
-        "nao pull_request nao success skipped",
-        // Fora de PR, a régua de antes: partes `success`, qualquer que seja o
-        // output (fora de PR ele é sempre `sim`; `nao` aqui não abre porta).
-        "nao push sim success success",
-        "nao push nao success success",
-        // Saída vazia com o job de alcance `success` não acontece (ele sempre
-        // escreve a saída); se acontecer, só passa com as partes MEDIDAS.
-        "nao pull_request vazio success success",
-        "nao push vazio success success",
-        // #2449: run de head superado NÃO passa em combinação nenhuma — nem
-        // com partes `success` (mediria outro head, não este) nem com partes
-        // `skipped` (o check está num SHA que já não é o head, então o pulo
-        // como verde é o defeito). Aqui ele REPROVA com mensagem própria, e é
-        // a ausência das linhas `sim ...` nesta lista que mede isso.
-      ].sort(),
-    );
-  });
+  it(
+    "da matriz inteira de desfechos (288), passa exatamente o que foi declarado",
+    { timeout: 60_000 },
+    () => {
+      expect(combinacoesAceitas().sort()).toEqual(
+        [
+          // PR que alcança: as partes têm de passar.
+          "nao pull_request sim success success",
+          // PR que não alcança: partes puladas, e SÓ puladas — `failure` não é pulo.
+          "nao pull_request nao success skipped",
+          // Fora de PR, a régua de antes: partes `success`, qualquer que seja o
+          // output (fora de PR ele é sempre `sim`; `nao` aqui não abre porta).
+          "nao push sim success success",
+          "nao push nao success success",
+          // Disparo manual é fora de PR: também exige as partes medidas.
+          "nao workflow_dispatch sim success success",
+          "nao workflow_dispatch nao success success",
+          "nao workflow_dispatch vazio success success",
+          // Saída vazia com o job de alcance `success` não acontece (ele sempre
+          // escreve a saída); se acontecer, só passa com as partes MEDIDAS.
+          "nao pull_request vazio success success",
+          "nao push vazio success success",
+          // #2449: run de head superado NÃO passa em combinação nenhuma — nem
+          // com partes `success` (mediria outro head, não este) nem com partes
+          // `skipped` (o check está num SHA que já não é o head, então o pulo
+          // como verde é o defeito). Aqui ele REPROVA com mensagem própria, e é
+          // a ausência das linhas `sim ...` nesta lista que mede isso.
+        ].sort(),
+      );
+    },
+  );
 });
