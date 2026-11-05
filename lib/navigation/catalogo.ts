@@ -563,6 +563,15 @@ export const NAV_CATALOG = [
     sidebar: true,
   },
   {
+    href: "/app/ai/zoe",
+    label: "Zoe",
+    description: "Converse com a assistente comercial para pesquisar, planejar e esclarecer próximos passos.",
+    icon: "ChatCircle",
+    group: "ia",
+    section: "Usar o agente",
+    minRole: "manager",
+  },
+  {
     href: "/app/ai/followups",
     label: "Follow-ups",
     description: "Como o agente retoma uma conversa que esfriou, para nenhuma morrer no silêncio.",
@@ -784,6 +793,15 @@ export const NAV_CATALOG = [
     // Continua pesquisável e alcançável pelo hub de Conexões, sem ultrapassar
     // o limite de linhas úteis do menu lateral.
     sidebar: false,
+  },
+  {
+    href: "/app/settings/zoe",
+    label: "Conexão da Zoe",
+    description: "Configure o gateway seguro do n8n usado pela assistente comercial.",
+    icon: "Plugs",
+    group: "organizacao",
+    section: "Integrações",
+    minRole: "admin",
   },
   {
     // Não tinha link nenhum no app inteiro: só se chegava digitando a URL.

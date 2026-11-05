@@ -1428,6 +1428,12 @@ export const AUDIT_ACTIONS = [
   // Tentativa manual e confirmada de enviar uma mensagem para a própria caixa.
   "email.test_message_accepted",
   "email.test_message_failed",
+  // Conexão administrativa entre o CRM e a Zoe no n8n. O audit registra
+  // somente o identificador da empresa e se o segredo foi trocado; o Bearer,
+  // a pergunta e a resposta nunca entram na trilha.
+  "ai.zoe_gateway_configured",
+  "ai.zoe_gateway_removed",
+  "ai.zoe_chat_asked",
 ] as const;
 
 /** Um código de auditoria. Derivado de `AUDIT_ACTIONS` — não redigite a lista. */

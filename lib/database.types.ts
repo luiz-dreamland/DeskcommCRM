@@ -11754,6 +11754,56 @@ export type Database = {
           },
         ];
       };
+      organization_zoe_gateway_connections: {
+        Row: {
+          authorization_header_encrypted: string;
+          company_slug: string;
+          created_at: string;
+          created_by: string | null;
+          id: string;
+          last_error_code: string | null;
+          last_successful_call_at: string | null;
+          organization_id: string;
+          updated_at: string;
+          updated_by: string | null;
+          webhook_url: string;
+        };
+        Insert: {
+          authorization_header_encrypted: string;
+          company_slug: string;
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          last_error_code?: string | null;
+          last_successful_call_at?: string | null;
+          organization_id: string;
+          updated_at?: string;
+          updated_by?: string | null;
+          webhook_url: string;
+        };
+        Update: {
+          authorization_header_encrypted?: string;
+          company_slug?: string;
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          last_error_code?: string | null;
+          last_successful_call_at?: string | null;
+          organization_id?: string;
+          updated_at?: string;
+          updated_by?: string | null;
+          webhook_url?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "organization_zoe_gateway_connections_organization_id_fkey";
+            columns: ["organization_id"];
+            isOneToOne: true;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       organizations: {
         Row: {
           cnpj: string | null;

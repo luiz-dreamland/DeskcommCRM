@@ -23,6 +23,7 @@ ser fonte sem ninguém decidir isso.
 | `conversoes-de-anuncios.architecture.json` | Purchase, etapas e LeadSubmitted por clique CTWA; entrega, livro de cliques e reprocessamento |
 | `prospeccao-nativa.architecture.json` | busca comercial, fila gradual, fallback Firecrawl opcional para páginas JS, configuração conversacional persistente, sandbox e assistente de voz opcional |
 | `email-channel-zoe.architecture.json` | conexão Hostinger, SMTP, cron IMAP, Inbox e restrição determinística de ferramentas para e-mail externo; conexão real ainda pendente |
+| `zoe-crm-copilot.architecture.json` | conversa iniciada pelo operador, gateway n8n autenticado, segredo cifrado e ferramentas CRM somente de leitura |
 | `pre-go-live-whatsapp.architecture.json` | modo de teste por canal (issue #573): configuração administrativa, gate compartilhado, releitura no envio e validação pelo Inbox |
 | `app-da-meta-da-instalacao.architecture.json` | App da Meta da instalação (issue #850, migration 0257) — 10 peças, 12 arestas; a tela `/admin/meta` que grava a chave e mostra o token uma vez, o resolvedor que serve o par inteiro de UMA fonte (banco, com o `.env` de reserva) e por que Conexões só mostra o token quando ele veio do `.env` |
 | `agenda-google-sync.architecture.json` | fontes/destino por dono, tupla estável, três vias, claim/CAS e cobertura de calendário; presença e LGPD integradas |

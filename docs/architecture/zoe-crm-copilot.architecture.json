@@ -1,0 +1,119 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Zoe no DeskcommCRM",
+    "subtitle": "Chat iniciado pelo operador, gateway n8n autenticado e ferramentas CRM somente de leitura",
+    "output": "zoe-crm-copilot.html",
+    "quality_profile": "standard"
+  },
+  "lanes": [
+    { "id": "operador", "label": "Operador" },
+    { "id": "crm", "label": "DeskcommCRM" },
+    { "id": "dados", "label": "Dados" },
+    { "id": "automacao", "label": "n8n e modelo" }
+  ],
+  "mainPath": ["operator", "chat", "api", "connection", "gateway", "answer"],
+  "nodes": [
+    {
+      "id": "operator",
+      "lane": "operador",
+      "col": 0,
+      "type": "frontend",
+      "label": "Manager — envia pedido manualmente"
+    },
+    {
+      "id": "chat",
+      "lane": "crm",
+      "col": 1,
+      "type": "frontend",
+      "label": "/app/ai/zoe — histórico local por usuário e organização"
+    },
+    {
+      "id": "api",
+      "lane": "crm",
+      "col": 2,
+      "type": "api",
+      "label": "POST /api/v1/ai/zoe/ask — RBAC, rate limit, HMAC e timeout"
+    },
+    {
+      "id": "settings",
+      "lane": "crm",
+      "col": 1,
+      "type": "frontend",
+      "label": "/app/settings/zoe — configuração apenas por admin"
+    },
+    {
+      "id": "connection",
+      "lane": "dados",
+      "col": 3,
+      "type": "database",
+      "label": "organization_zoe_gateway_connections — Authorization cifrado"
+    },
+    {
+      "id": "audit",
+      "lane": "dados",
+      "col": 3,
+      "type": "database",
+      "label": "api_audit_log — sem pergunta, resposta ou segredo"
+    },
+    {
+      "id": "gateway",
+      "lane": "automacao",
+      "col": 4,
+      "type": "external",
+      "label": "n8n — webhook autenticado e workflow Zoe CRM Gateway"
+    },
+    {
+      "id": "answer",
+      "lane": "automacao",
+      "col": 5,
+      "type": "external",
+      "label": "Modelo, memória Postgres e ferramentas CRM read-only"
+    }
+  ],
+  "edges": [
+    { "id": "e1", "from": "operator", "to": "chat", "label": "pergunta consciente" },
+    { "id": "e2", "from": "chat", "to": "api", "label": "mensagem, grupo e id da conversa" },
+    { "id": "e3", "from": "api", "to": "connection", "label": "busca pela organização da sessão" },
+    {
+      "id": "e4",
+      "from": "settings",
+      "to": "connection",
+      "label": "cifra e salva credencial pelo servidor"
+    },
+    {
+      "id": "e5",
+      "from": "api",
+      "to": "gateway",
+      "label": "Authorization decifrado apenas em memória"
+    },
+    {
+      "id": "e6",
+      "from": "gateway",
+      "to": "answer",
+      "label": "resposta e consultas de leitura ao CRM"
+    },
+    { "id": "e7", "from": "api", "to": "audit", "label": "empresa, grupo, duração e sucesso" },
+    {
+      "id": "e8",
+      "from": "answer",
+      "to": "chat",
+      "label": "resposta renderizada como texto simples"
+    }
+  ],
+  "contracts": {
+    "status": "implementação local; requer migration, configuração segura do n8n e teste autorizado de ponta a ponta",
+    "spec": "docs/specs/34-zoe-crm-copilot.md",
+    "no_links": [
+      "O chat não inicia sozinho e não envia mensagem a leads.",
+      "As ferramentas disponíveis à Zoe não gravam registros no CRM.",
+      "Nenhum conteúdo da conversa é gravado no audit log."
+    ],
+    "limits": [
+      "Histórico visível fica no armazenamento local do navegador; a memória do modelo fica no n8n.",
+      "Não há repetição automática após timeout porque o n8n pode já ter registrado a pergunta.",
+      "A conexão depende do endereço de produção e do Bearer configurados pelo admin."
+    ]
+  }
+}
