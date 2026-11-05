@@ -102,6 +102,7 @@ function bancoFalso(d: Dublê = {}) {
   const db = {
     query: vi.fn(async (sql: string, params: unknown[] = []) => {
       chamadas.push({ sql, params });
+      if (sql.includes("from channel_sessions where")) return { rows: [{ provider: "waha" }] };
       if (sql.includes("phone_number=any")) return { rows: d.contatosConhecidos ?? [] };
       if (sql.includes("source='prospecting' and source_metadata"))
         return { rows: d.contatoDaCampanha ?? [] };
@@ -212,7 +213,7 @@ describe("enfileirarCandidatos: o que acontece ao iniciar", () => {
 describe("triarCandidato", () => {
   it("telefone desconhecido: segue, sem contato da campanha", async () => {
     const { db } = bancoFalso();
-    expect(await triarCandidato(db, ORG, CAMPANHA, candidato(1))).toEqual({
+    expect(await triarCandidato(db, ORG, CAMPANHA, candidato(1), false)).toEqual({
       contatoDaCampanha: null,
     });
   });
@@ -222,14 +223,14 @@ describe("triarCandidato", () => {
       contatosConhecidos: [{ id: CONTATO }],
       contatoDaCampanha: [{ id: CONTATO }],
     });
-    expect(await triarCandidato(db, ORG, CAMPANHA, candidato(1))).toEqual({
+    expect(await triarCandidato(db, ORG, CAMPANHA, candidato(1), false)).toEqual({
       contatoDaCampanha: CONTATO,
     });
   });
 
   it("contato de outra origem: pula, e a consulta do contato da campanha leva o id da campanha e o lugar", async () => {
     const { db, chamadas } = bancoFalso({ contatosConhecidos: [{ id: "alheio" }] });
-    expect(await triarCandidato(db, ORG, CAMPANHA, candidato(1))).toEqual({
+    expect(await triarCandidato(db, ORG, CAMPANHA, candidato(1), false)).toEqual({
       motivo: "Contato já existe no CRM; atendimento preservado.",
     });
     const dono = chamadas.find((c) => c.sql.includes("source='prospecting'"));
@@ -238,7 +239,7 @@ describe("triarCandidato", () => {
 
   it("sem telefone: pula, e nem consulta o CRM", async () => {
     const { db, chamadas } = bancoFalso();
-    expect(await triarCandidato(db, ORG, CAMPANHA, candidato(1, { phone: null }))).toEqual({
+    expect(await triarCandidato(db, ORG, CAMPANHA, candidato(1, { phone: null }), false)).toEqual({
       motivo: "Sem telefone brasileiro válido.",
     });
     expect(chamadas).toHaveLength(0);
