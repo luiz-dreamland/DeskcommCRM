@@ -147,8 +147,8 @@ export async function sendNextCandidate(
     numberActivatedAt,
   });
   const channel = (
-    await db.query(
-      "select daily_message_limit from channel_sessions where organization_id=$1 and id=$2",
+    await db.query<{ daily_message_limit: number | null; provider: string }>(
+      "select daily_message_limit,provider from channel_sessions where organization_id=$1 and id=$2",
       [c.organization_id, cfg.channel_session_id],
     )
   ).rows[0];
@@ -394,12 +394,21 @@ export async function sendNextCandidate(
     // `split_max_chars` — é o mesmo preço que o `splitForSend` já paga quando o
     // teto de bolhas do turno é atingido: a alternativa seria picar a saída em
     // duas mensagens, e aí ela voltaria a depender de uma bolha posterior.
-    const baloes = splitForSend(
-      generated.texto,
-      agent.split_messages ?? false,
-      agent.split_max_chars ?? 600,
-      TETO_DE_BOLHAS_DA_ABORDAGEM,
-    );
+    const baloes =
+      channel.provider === "hostinger_email"
+        ? [generated.texto.trim()]
+        : splitForSend(
+            generated.texto,
+            agent.split_messages ?? false,
+            agent.split_max_chars ?? 600,
+            TETO_DE_BOLHAS_DA_ABORDAGEM,
+          );
+    if (channel.provider === "hostinger_email" && !baloes[0])
+      throw new ProspectingError(
+        "A IA não produziu conteúdo para o e-mail desta empresa.",
+        422,
+        "candidato",
+      );
     // Texto vazio com o estilo ligado não devolve bolha nenhuma (`splitForSend` →
     // `[]`), e a abordagem fria não pode sair sem bolha nenhuma: neste caso a
     // primeira bolha é vazia (e, no modo `first_message`, é ela que leva o rodapé).

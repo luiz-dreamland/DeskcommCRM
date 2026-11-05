@@ -10,6 +10,7 @@ import { beginServiceAtOrigin } from "@/lib/atendimento/origem";
 import { capabilitiesOf } from "@/lib/channels/capabilities";
 import type { ChannelProvider } from "@/lib/channels/types";
 import { canonicalPhoneBR, phoneLookupVariants } from "@/lib/channels/phone-variants";
+import { lerModoDeAcessoDaIa } from "@/lib/ai/elegibilidade/pre-go-live";
 import { decryptWebhookSecret, encryptWebhookSecret } from "@/lib/webhooks/secrets";
 import {
   campaignConfigSchema,
@@ -660,8 +661,8 @@ export async function validateConfig(db: pg.PoolClient, org: string, input: Camp
       "Publique o agente com a ferramenta de mover negócios e acesso ao funil escolhido.",
     );
   const channel = (
-    await db.query<{ provider: ChannelProvider; status: string }>(
-      "select provider,status from channel_sessions where organization_id=$1 and id=$2 and archived_at is null",
+    await db.query<{ provider: ChannelProvider; status: string; metadata: unknown }>(
+      "select provider,status,metadata from channel_sessions where organization_id=$1 and id=$2 and archived_at is null",
       [org, config.channel_session_id],
     )
   ).rows[0];
@@ -676,6 +677,13 @@ export async function validateConfig(db: pg.PoolClient, org: string, input: Camp
   if (!capabilitiesOf(channel.provider).freeformOutsideWindow)
     throw new ProspectingError(
       "Esta conexão exige modelo aprovado e ainda não participa desta campanha. Escolha uma conexão que permita iniciar conversas de texto.",
+    );
+  if (
+    channel.provider === "hostinger_email" &&
+    lerModoDeAcessoDaIa(channel.metadata) !== "open"
+  )
+    throw new ProspectingError(
+      "Campanhas de e-mail não podem usar lista de teste por telefone. Faça o teste pela própria conexão de e-mail e abra o canal antes da campanha.",
     );
   // O ÚNICO dos três que NÃO é defeito: a sessão está voltando sozinha.
   if (canalReconectando(channel.status))
@@ -733,8 +741,12 @@ export async function triarCandidato(
   org: string,
   campaignId: string,
   p: Candidate,
+  canalExigeEmail: boolean,
 ): Promise<{ motivo: string } | { contatoDaCampanha: string | null }> {
   if (!p.phone) return { motivo: "Sem telefone brasileiro válido." };
+  const email = emailPublicoParaContato(p);
+  if (canalExigeEmail && !email)
+    return { motivo: "Sem e-mail público válido para esta conexão." };
   let known = await db.query(
     "select id from contacts where organization_id=$1 and phone_number=any($2::text[])",
     [org, phoneLookupVariants(p.phone)],
@@ -748,7 +760,30 @@ export async function triarCandidato(
       [org, canonicalPhoneBR(p.phone)],
     );
   }
-  let contactId = p.contact_id;
+  let emailOwnedContactId: string | null = null;
+  if (canalExigeEmail && email) {
+    const porEmail = await db.query<{ id: string }>(
+      "select id from contacts where organization_id=$1 and lower(trim(email))=$2 and is_merged_into is null limit 2",
+      [org, email],
+    );
+    if (porEmail.rows.length > 1)
+      return { motivo: "E-mail corresponde a mais de um contato; revisar manualmente." };
+    const phoneContactId = known.rows[0]?.id;
+    const emailContactId = porEmail.rows[0]?.id;
+    if (emailContactId && phoneContactId && emailContactId !== phoneContactId)
+      return { motivo: "Telefone e e-mail correspondem a contatos diferentes; revisar manualmente." };
+    if (emailContactId && p.contact_id && emailContactId !== p.contact_id)
+      return { motivo: "E-mail corresponde a outro contato; revisar manualmente." };
+    if (emailContactId && !phoneContactId) {
+      const owned = await db.query(
+        "select id from contacts where organization_id=$1 and id=$2 and source='prospecting' and source_metadata->>'campaign_id'=$3 and source_metadata->>'place_id'=$4",
+        [org, emailContactId, campaignId, p.data.key],
+      );
+      if (!owned.rows[0]) return { motivo: "E-mail já existe no CRM; atendimento preservado." };
+      emailOwnedContactId = emailContactId;
+    }
+  }
+  let contactId = p.contact_id ?? emailOwnedContactId;
   if (known.rows.length && !contactId) {
     const owned = await db.query(
       "select id from contacts where organization_id=$1 and id=$2 and source='prospecting' and source_metadata->>'campaign_id'=$3 and source_metadata->>'place_id'=$4",
@@ -780,6 +815,44 @@ function linksParaContatoNovo(p: Candidate): Record<string, unknown> | undefined
 }
 
 /**
+ * E-mail comercial que a própria empresa publicou. Uma página pública é apenas a
+ * origem do endereço; ela não comprova consentimento nem substitui a base legal
+ * configurada para a campanha.
+ */
+function emailPublicoParaContato(p: Candidate): string | null {
+  const encontrados = [
+    ...(Array.isArray(p.data.emails) ? p.data.emails : []),
+    ...(Array.isArray(p.data.site?.contatos_publicos?.emails)
+      ? p.data.site.contatos_publicos.emails
+      : []),
+  ];
+  for (const raw of encontrados) {
+    if (typeof raw !== "string") continue;
+    const email = raw.trim().toLowerCase();
+    if (
+      email.length <= 254 &&
+      !/[\s<>\u0000-\u001f\u007f]/.test(email) &&
+      /^[^@]+@[^@]+\.[^@]+$/.test(email)
+    )
+      return email;
+  }
+  return null;
+}
+
+async function canalExigeEnderecoEmail(
+  db: pg.PoolClient,
+  org: string,
+  channelSessionId: string,
+): Promise<boolean> {
+  const { rows } = await db.query<{ provider: ChannelProvider }>(
+    "select provider from channel_sessions where organization_id=$1 and id=$2 and archived_at is null",
+    [org, channelSessionId],
+  );
+  if (!rows[0]) throw new ProspectingError("Conexão de saída indisponível.");
+  return rows[0].provider === "hostinger_email";
+}
+
+/**
  * A PEGADA DE UMA EMPRESA NO CRM: contato, negócio no funil e conversa.
  *
  * Era o corpo do laço de `activateCampaign`, que criava isso para TODA a fila no
@@ -804,6 +877,7 @@ export async function criarPegadaDoCandidato(
   // A triagem já recusou quem não tem telefone; esta guarda só diz isso ao compilador,
   // que não enxerga a triagem daqui (no laço original o `continue` já estreitava o tipo).
   if (!p.phone) throw new ProspectingError("Sem telefone brasileiro válido.", 422, "candidato");
+  const exigeEmail = await canalExigeEnderecoEmail(db, org, config.channel_session_id);
   // ─── O CARIMBO DO PEDIDO (#3072) ─────────────────────────────────────────
   //
   // Este `requestId` vai parar em `metadata.request_id` do `lead.created` que o
@@ -832,10 +906,12 @@ export async function criarPegadaDoCandidato(
   let contactId = contatoDaCampanha ?? p.contact_id;
   if (!contactId) {
     const linksDoNovo = linksParaContatoNovo(p);
+    const email = emailPublicoParaContato(p);
     const contact = await createContactHandler(admin, ctx, {
       name: p.data.name,
       display_name: p.data.name,
       phone_number: p.phone,
+      ...(email ? { email } : {}),
       source: "prospecting",
       source_metadata: { campaign_id: c.id, place_id: p.data.key, maps_url: p.data.maps_url },
       consent: { legitimate_interest: { ref: config.legal_basis_ref } },
@@ -876,9 +952,13 @@ export async function criarPegadaDoCandidato(
     [org, p.id, contactId, leadId],
   );
   const boundary = await beginServiceAtOrigin(admin, org, contactId, config.channel_session_id);
+  const conversationMetadata: Record<string, string> = {
+    prospecting_campaign_id: c.id,
+  };
+  if (exigeEmail) conversationMetadata.email_subject = c.name;
   await db.query(
-    "update conversations set active_ai_agent_id=$3,metadata=coalesce(metadata,'{}'::jsonb) || jsonb_build_object('prospecting_campaign_id',$4::text) where organization_id=$1 and id=$2",
-    [org, boundary.conversation_id, config.agent_id, c.id],
+    "update conversations set active_ai_agent_id=$3,metadata=coalesce(metadata,'{}'::jsonb) || $4::jsonb where organization_id=$1 and id=$2",
+    [org, boundary.conversation_id, config.agent_id, JSON.stringify(conversationMetadata)],
   );
   const { rows } = await db.query<Candidate>(
     "update prospecting_candidates set status='queued',conversation_id=$3,service_boundary=$4,error=null,updated_at=now() where organization_id=$1 and id=$2 returning *",
@@ -905,7 +985,8 @@ export async function prepararCandidatoNoEnvio(
   p: Candidate,
 ): Promise<Candidate | null> {
   const org = c.organization_id;
-  const triagem = await triarCandidato(db, org, c.id, p);
+  const canalEmail = await canalExigeEnderecoEmail(db, org, config.channel_session_id);
+  const triagem = await triarCandidato(db, org, c.id, p, canalEmail);
   if ("motivo" in triagem) {
     await db.query(
       "update prospecting_candidates set status='skipped',error=$3,updated_at=now() where organization_id=$1 and id=$2 and status='queued'",
@@ -957,6 +1038,7 @@ export async function enfileirarCandidatos(
   candidates: Candidate[],
 ) {
   const id = c.id;
+  const canalEmail = await canalExigeEnderecoEmail(db, org, config.channel_session_id);
   for (const p of candidates) {
     const selectionReason = razaoDeAbordarSelecionado(p.selected);
     if (selectionReason) {
@@ -966,7 +1048,7 @@ export async function enfileirarCandidatos(
       );
       continue;
     }
-    const triagem = await triarCandidato(db, org, id, p);
+    const triagem = await triarCandidato(db, org, id, p, canalEmail);
     if ("motivo" in triagem) {
       await db.query(
         "update prospecting_candidates set status='skipped',error=$3 where organization_id=$1 and id=$2",

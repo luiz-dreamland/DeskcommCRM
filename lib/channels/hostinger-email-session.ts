@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { logger } from "@/lib/logger";
 import type { createAdminClient } from "@/lib/supabase/admin";
 import { encryptWebhookSecret } from "@/lib/webhooks/secrets";
+import { metadataInicialDoCanal } from "@/lib/ai/elegibilidade/pre-go-live";
 
 type Admin = ReturnType<typeof createAdminClient>;
 
@@ -12,10 +13,10 @@ export async function ensureHostingerEmailChannelSession(
   input: { organizationId: string; connectionId: string; mailboxEmail: string; actorUserId: string },
 ): Promise<boolean> {
   const sessionRef = `email:${input.connectionId}`;
-  const metadata = { channel_kind: "email", email_connection_id: input.connectionId };
+  const baseMetadata = metadataInicialDoCanal();
   const { data: existing, error: readError } = await admin
     .from("channel_sessions")
-    .select("id")
+    .select("id,metadata")
     .eq("organization_id", input.organizationId)
     .eq("provider", "hostinger_email")
     .maybeSingle();
@@ -23,6 +24,14 @@ export async function ensureHostingerEmailChannelSession(
     logger.error("[email.hostinger] falha ao ler sessão do canal", { code: readError.code });
     return false;
   }
+  const metadata = {
+    ...baseMetadata,
+    ...(existing?.metadata && typeof existing.metadata === "object" && !Array.isArray(existing.metadata)
+      ? existing.metadata
+      : {}),
+    channel_kind: "email",
+    email_connection_id: input.connectionId,
+  };
   if (existing) {
     const { error } = await admin
       .from("channel_sessions")

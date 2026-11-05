@@ -19,9 +19,10 @@ function escapeHtml(value: string): string {
     .replace(/\r?\n/g, "<br>");
 }
 
-function replySubject(value: string | null | undefined): string {
+function subjectForEmail(value: string | null | undefined, isReply: boolean): string {
   const subject = (value ?? "").replace(/[\r\n\u0000-\u001f]/g, " ").trim().slice(0, 480);
-  if (!subject) return "Mensagem";
+  if (!subject) return isReply ? "Re: Mensagem" : "Mensagem";
+  if (!isReply) return subject.replace(/^(?:re\s*:\s*)+/i, "").trim() || "Mensagem";
   return /^re\s*:/i.test(subject) ? subject : `Re: ${subject}`;
 }
 
@@ -74,7 +75,7 @@ export const hostingerEmailAdapter: ChannelAdapter = {
     ])].slice(-50);
     const result = await sendHostingerEmail(account.credentials, {
       to: envelope.to,
-      subject: replySubject(envelope.emailSubject),
+      subject: subjectForEmail(envelope.emailSubject, !!replyTo),
       text: body,
       html: `<div>${escapeHtml(body)}</div>`,
       ...(replyTo ? { inReplyTo: replyTo } : {}),
