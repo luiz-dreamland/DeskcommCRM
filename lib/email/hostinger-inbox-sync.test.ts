@@ -73,6 +73,7 @@ class FakeAdmin {
   insertedMessages: Row[] = [];
   conversationsCreated = 0;
   cursorUpdates = 0;
+  events: string[] = [];
 
   from(table: string) { return new Query(this, table); }
 
@@ -91,7 +92,10 @@ class FakeAdmin {
         if (filters.has("inbox_uid_validity") && filters.get("inbox_uid_validity") !== this.connection.inbox_uid_validity) return single ? null : [];
         if (filters.has("inbox_last_uid") && filters.get("inbox_last_uid") !== this.connection.inbox_last_uid) return single ? null : [];
         if (payload.inbox_claim_token && this.connection.inbox_claim_token) return single ? null : [];
-        if (payload.inbox_uid_validity !== undefined || payload.inbox_last_uid !== undefined) this.cursorUpdates++;
+        if (payload.inbox_uid_validity !== undefined || payload.inbox_last_uid !== undefined) {
+          this.cursorUpdates++;
+          this.events.push("cursor-advanced");
+        }
         Object.assign(this.connection, payload);
         return single ? { id: this.connection.id } : [];
       }
@@ -150,6 +154,7 @@ class FakeAdmin {
         }
       }
       if (operation === "insert") {
+        this.events.push("message-persisted");
         this.message = {
           id: "message-1",
           ...payload,
@@ -200,7 +205,9 @@ describe("sincronização idempotente da caixa Hostinger", () => {
     mocks.readPage.mockResolvedValue(readyPage());
     mocks.createCursor.mockResolvedValue({ uidValidity: "18", lastUid: 100 });
     mocks.markConversation.mockResolvedValue(undefined);
-    mocks.applyEffects.mockResolvedValue(undefined);
+    mocks.applyEffects.mockImplementation(async (admin: FakeAdmin) => {
+      admin.events.push("effects-dispatched");
+    });
   });
 
   it("persiste e despacha a mensagem antes de avançar o cursor", async () => {
@@ -210,6 +217,7 @@ describe("sincronização idempotente da caixa Hostinger", () => {
     expect(result).toEqual({ scanned: 1, inserted: 1, duplicates: 0, skipped: 0, errors: 0 });
     expect(admin.connection.inbox_last_uid).toBe(6);
     expect(admin.cursorUpdates).toBe(1);
+    expect(admin.events).toEqual(["message-persisted", "effects-dispatched", "cursor-advanced"]);
     expect(admin.insertedMessages).toHaveLength(1);
     expect(admin.message?.metadata).toMatchObject({
       email_inbound_effects_status: "completed",
@@ -234,6 +242,7 @@ describe("sincronização idempotente da caixa Hostinger", () => {
     expect(admin.connection.inbox_last_uid).toBe(5);
     expect((admin.message?.metadata as Row).email_inbound_effects_status).toBe("pending");
     expect(admin.cursorUpdates).toBe(0);
+    expect(admin.events).toEqual(["message-persisted"]);
     expect(admin.insertedMessages).toHaveLength(1);
 
     const retried = await syncHostingerInboxes(admin as never);
@@ -241,6 +250,7 @@ describe("sincronização idempotente da caixa Hostinger", () => {
     expect(admin.connection.inbox_last_uid).toBe(6);
     expect((admin.message?.metadata as Row).email_inbound_effects_status).toBe("completed");
     expect(admin.cursorUpdates).toBe(1);
+    expect(admin.events).toEqual(["message-persisted", "effects-dispatched", "cursor-advanced"]);
     expect(admin.insertedMessages).toHaveLength(1);
     expect(mocks.applyEffects).toHaveBeenCalledTimes(2);
   });
