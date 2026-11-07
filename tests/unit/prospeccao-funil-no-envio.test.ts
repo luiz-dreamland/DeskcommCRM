@@ -94,6 +94,8 @@ const candidato = (n: number, extra: Record<string, unknown> = {}) =>
 
 type Dublê = {
   contatosConhecidos?: { id: string }[];
+  contatosPorEmail?: { id: string }[];
+  provider?: string;
   contatoDaCampanha?: { id: string }[];
   negocioExistente?: { id: string } | null;
 };
@@ -102,6 +104,9 @@ function bancoFalso(d: Dublê = {}) {
   const db = {
     query: vi.fn(async (sql: string, params: unknown[] = []) => {
       chamadas.push({ sql, params });
+      if (sql.includes("from channel_sessions where"))
+        return { rows: [{ provider: d.provider ?? "waha" }] };
+      if (sql.includes("lower(trim(email))")) return { rows: d.contatosPorEmail ?? [] };
       if (sql.includes("phone_number=any")) return { rows: d.contatosConhecidos ?? [] };
       if (sql.includes("source='prospecting' and source_metadata"))
         return { rows: d.contatoDaCampanha ?? [] };
@@ -207,12 +212,41 @@ describe("enfileirarCandidatos: o que acontece ao iniciar", () => {
       "Contato já existe no CRM; atendimento preservado.",
     );
   });
+
+  it("campanha por e-mail enfileira somente empresas com endereço público", async () => {
+    const { db, chamadas } = bancoFalso({ provider: "hostinger_email" });
+    const comEmail = candidato(2, {
+      data: {
+        name: "Clínica 2",
+        key: "place-2",
+        maps_url: null,
+        socials: [],
+        emails: ["contato@clinica.test"],
+      },
+    });
+
+    await enfileirarCandidatos(db, {} as never, ORG, campanha, configOnSend, [
+      candidato(1),
+      comEmail,
+    ]);
+
+    expect(
+      chamadas
+        .filter((chamada) => chamada.sql.includes("set status='queued'"))
+        .map((chamada) => chamada.params[1]),
+    ).toEqual([comEmail.id]);
+    expect(
+      chamadas
+        .filter((chamada) => chamada.sql.includes("set status='skipped'"))
+        .map((chamada) => [chamada.params[1], chamada.params[2]]),
+    ).toEqual([[uuid(101), "Sem e-mail público válido para esta conexão."]]);
+  });
 });
 
 describe("triarCandidato", () => {
   it("telefone desconhecido: segue, sem contato da campanha", async () => {
     const { db } = bancoFalso();
-    expect(await triarCandidato(db, ORG, CAMPANHA, candidato(1))).toEqual({
+    expect(await triarCandidato(db, ORG, CAMPANHA, candidato(1), false)).toEqual({
       contatoDaCampanha: null,
     });
   });
@@ -222,14 +256,14 @@ describe("triarCandidato", () => {
       contatosConhecidos: [{ id: CONTATO }],
       contatoDaCampanha: [{ id: CONTATO }],
     });
-    expect(await triarCandidato(db, ORG, CAMPANHA, candidato(1))).toEqual({
+    expect(await triarCandidato(db, ORG, CAMPANHA, candidato(1), false)).toEqual({
       contatoDaCampanha: CONTATO,
     });
   });
 
   it("contato de outra origem: pula, e a consulta do contato da campanha leva o id da campanha e o lugar", async () => {
     const { db, chamadas } = bancoFalso({ contatosConhecidos: [{ id: "alheio" }] });
-    expect(await triarCandidato(db, ORG, CAMPANHA, candidato(1))).toEqual({
+    expect(await triarCandidato(db, ORG, CAMPANHA, candidato(1), false)).toEqual({
       motivo: "Contato já existe no CRM; atendimento preservado.",
     });
     const dono = chamadas.find((c) => c.sql.includes("source='prospecting'"));
@@ -238,10 +272,58 @@ describe("triarCandidato", () => {
 
   it("sem telefone: pula, e nem consulta o CRM", async () => {
     const { db, chamadas } = bancoFalso();
-    expect(await triarCandidato(db, ORG, CAMPANHA, candidato(1, { phone: null }))).toEqual({
+    expect(await triarCandidato(db, ORG, CAMPANHA, candidato(1, { phone: null }), false)).toEqual({
       motivo: "Sem telefone brasileiro válido.",
     });
     expect(chamadas).toHaveLength(0);
+  });
+
+  it("e-mail sem endereço público válido é descartado antes de consultar contatos", async () => {
+    const { db, chamadas } = bancoFalso();
+    expect(await triarCandidato(db, ORG, CAMPANHA, candidato(1), true)).toEqual({
+      motivo: "Sem e-mail público válido para esta conexão.",
+    });
+    expect(chamadas).toHaveLength(0);
+  });
+
+  it("não associa telefone e e-mail que pertencem a contatos diferentes", async () => {
+    const { db, chamadas } = bancoFalso({
+      contatosConhecidos: [{ id: "contato-telefone" }],
+      contatosPorEmail: [{ id: "contato-email" }],
+    });
+    const prospecto = candidato(1, {
+      data: {
+        name: "Clínica 1",
+        key: "place-1",
+        maps_url: null,
+        socials: [],
+        emails: ["vendas@clinica.test"],
+      },
+    });
+
+    expect(await triarCandidato(db, ORG, CAMPANHA, prospecto, true)).toEqual({
+      motivo: "Telefone e e-mail correspondem a contatos diferentes; revisar manualmente.",
+    });
+    expect(chamadas.some((chamada) => chamada.sql.includes("source='prospecting'"))).toBe(false);
+  });
+
+  it("não reaproveita endereço de outra ficha do CRM sem vínculo com esta prospecção", async () => {
+    const { db, chamadas } = bancoFalso({ contatosPorEmail: [{ id: "contato-existente" }] });
+    const prospecto = candidato(1, {
+      data: {
+        name: "Clínica 1",
+        key: "place-1",
+        maps_url: null,
+        socials: [],
+        emails: ["vendas@clinica.test"],
+      },
+    });
+
+    expect(await triarCandidato(db, ORG, CAMPANHA, prospecto, true)).toEqual({
+      motivo: "E-mail já existe no CRM; atendimento preservado.",
+    });
+    const dono = chamadas.find((chamada) => chamada.sql.includes("source='prospecting'"));
+    expect(dono?.params).toEqual([ORG, "contato-existente", CAMPANHA, "place-1"]);
   });
 });
 
@@ -468,14 +550,19 @@ describe("prepararCandidatoNoEnvio: os casos de borda que o revisor cego apontou
  */
 type Chamada = { table: string; data: Record<string, unknown> };
 function adminDoMotor(opcoes: { regras: unknown[]; negocio: Record<string, unknown> | null }) {
-  const registro: { inserts: Chamada[]; updates: Chamada[]; rpcs: { fn: string; args: Record<string, unknown> }[] } = {
+  const registro: {
+    inserts: Chamada[];
+    updates: Chamada[];
+    rpcs: { fn: string; args: Record<string, unknown> }[];
+  } = {
     inserts: [],
     updates: [],
     rpcs: [],
   };
 
   const listar = (table: string, mode: string, data: Record<string, unknown> | null) => {
-    if (table === "automation_rules" && mode === "select") return { data: opcoes.regras, error: null };
+    if (table === "automation_rules" && mode === "select")
+      return { data: opcoes.regras, error: null };
     if (mode === "insert") {
       registro.inserts.push({ table, data: data ?? {} });
       return { error: null };
@@ -492,7 +579,8 @@ function adminDoMotor(opcoes: { regras: unknown[]; negocio: Record<string, unkno
       registro.inserts.push({ table, data: data ?? {} });
       return { data: { id: "run-1" }, error: null };
     }
-    if (table === "automation_rules" && mode === "select") return { data: { run_count: 0 }, error: null };
+    if (table === "automation_rules" && mode === "select")
+      return { data: { run_count: 0 }, error: null };
     if (table === "crm_leads" && mode === "select") return { data: opcoes.negocio, error: null };
     return { data: null, error: null };
   };
@@ -526,7 +614,9 @@ function adminDoMotor(opcoes: { regras: unknown[]; negocio: Record<string, unkno
       // `RETURNING` devolveria é o que a ação usa para saber se houve escrita.
       if (fn === "fn_lead_adicionar_etiquetas") {
         const antes = (opcoes.negocio?.tags as string[] | undefined) ?? [];
-        const adicionadas = [...new Set(args.p_etiquetas as string[])].filter((t) => !antes.includes(t));
+        const adicionadas = [...new Set(args.p_etiquetas as string[])].filter(
+          (t) => !antes.includes(t),
+        );
         return { data: { tags: [...antes, ...adicionadas], adicionadas }, error: null };
       }
       return { data: null, error: null };
@@ -636,7 +726,10 @@ describe("o negócio que a campanha abre: a regra de `lead.created` RODA (#3072)
     });
     // O carimbo EXATO que a ação de regra escreve (`create-or-move-lead.ts`,
     // `send-ai-message.ts`, `send-whatsapp.ts`): `rule:<uuid da regra>`.
-    const resultado = await runAutomationForEvent(motor.admin, eventoDoNegocio({ request_id: `rule:${REGRA}` }));
+    const resultado = await runAutomationForEvent(
+      motor.admin,
+      eventoDoNegocio({ request_id: `rule:${REGRA}` }),
+    );
 
     expect(resultado).toEqual({
       consumer_key: AUTOMATION_CONSUMER_KEY,

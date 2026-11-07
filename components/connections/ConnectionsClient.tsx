@@ -596,7 +596,7 @@ export function ConnectionsClient({ wahaConfigured }: { wahaConfigured: boolean 
                     ? `${t("Verificado")} ${new Date(c.last_health_check_at).toLocaleString(tagDoIdioma)}`
                     : t("Ainda não verificado")}
                 </p>
-                <ChannelAiAccess channelId={c.id} />
+                <ChannelAiAccess channelId={c.id} phoneTesting={c.provider !== "hostinger_email"} />
                 {dependeDoTransporte(c) && <ChannelAcervo channelId={c.id} />}
                 {dependeDoTransporte(c) && <ChannelHistorico channelId={c.id} />}
                 <p className="text-xs text-muted-foreground">{t(!policy ? "Consulte os responsáveis em Atendimento." : policy.mode === "legacy_unconfigured" ? "Usa todos os atendentes elegíveis da organização." : policy.mode === "restricted_empty" ? "Ninguém configurado — as conversas ficarão na fila." : "Somente as pessoas selecionadas recebem este número.")}</p>

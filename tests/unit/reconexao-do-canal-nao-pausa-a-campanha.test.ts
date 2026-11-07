@@ -248,9 +248,12 @@ function banco() {
       // ── A VALIDAÇÃO DE VERDADE, que este arquivo exercita ponta a ponta ──
       if (sql.startsWith("select v.tool_ids,v.pipeline_ids from ai_agents a"))
         return { rows: [{ tool_ids: ["crm_move_lead_stage"], pipeline_ids: [id] }] };
-      if (sql.startsWith("select provider,status from channel_sessions"))
+      if (sql.startsWith("select provider,status,metadata from channel_sessions"))
         return {
-          rows: statusDoCanal === null ? [] : [{ provider: providerDoCanal, status: statusDoCanal }],
+          rows:
+            statusDoCanal === null
+              ? []
+              : [{ provider: providerDoCanal, status: statusDoCanal, metadata: {} }],
         };
       if (sql.includes("from crm_stages")) return { rows: [{ id }, { id: ESTAGIO }] };
       return { rows: [] };
